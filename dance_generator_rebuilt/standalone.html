@@ -384,7 +384,7 @@
       </section>
     </aside>
 
-    <main class="workspace">
+    <main class="workspace" id="workspaceView">
       <section class="card hero">
         <div>
           <p class="eyebrow">Arrangement Board</p>
@@ -399,7 +399,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="playlistSection">
         <div class="section-head">
           <h2>舞曲表</h2>
           <span>拖拽舞曲行可调整顺序</span>
@@ -896,12 +896,18 @@
       wrapper.style.background = "#fffaf2";
       wrapper.appendChild(clone);
       const data = new XMLSerializer().serializeToString(wrapper);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1248" height="1600"><foreignObject width="100%" height="100%">${data.replace(/#/g, "%23").replace(/\n/g, " ")}</foreignObject></svg>`;
+      const snapshotHeight = Math.max(node.scrollHeight + 80, 1200);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1248" height="${snapshotHeight}"><foreignObject width="100%" height="100%">${data.replace(/#/g, "%23").replace(/\n/g, " ")}</foreignObject></svg>`;
       const url = "data:image/svg+xml;charset=utf-8," + svg;
       els.preview.src = url;
       els.preview.style.display = "block";
       els.snapshotCaption.textContent = "已生成浏览器内快照";
       log("已生成页面快照");
+      const playlistSection = document.getElementById("playlistSection");
+      if (playlistSection) {
+        playlistSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      setTimeout(() => updatePlayingRow(), 250);
     }
 
     async function loadFiles() {
