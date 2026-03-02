@@ -126,6 +126,10 @@ select {
   margin-top: 14px;
 }
 
+.button-row button {
+  flex: 0 1 auto;
+}
+
 button {
   border: none;
   border-radius: 999px;
@@ -233,6 +237,7 @@ button.primary {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 #audioPlayer {
@@ -384,6 +389,7 @@ tr.part-row td {
 @media (max-width: 1100px) {
   .page-shell {
     grid-template-columns: 1fr;
+    padding: 16px;
   }
 
   .preview-grid {
@@ -393,5 +399,105 @@ tr.part-row td {
   .hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 900px) {
+  .page-shell {
+    gap: 16px;
+    padding: 14px;
+  }
+
+  .meta-card,
+  .stats-card,
+  .issues-card,
+  .log-card,
+  .table-card,
+  .preview-card,
+  .files-card,
+  .hero {
+    padding: 16px;
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-grid label:first-child {
+    grid-column: auto;
+  }
+
+  .button-row button {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 140px;
+  }
+
+  .section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hero-actions {
+    width: 100%;
+  }
+
+  #audioPlayer {
+    width: 100%;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-shell {
+    padding: 10px;
+  }
+
+  .panel-head h1,
+  .hero h2,
+  .section-title h2 {
+    font-size: 24px;
+  }
+
+  .card {
+    border-radius: 18px;
+  }
+
+  .button-row {
+    gap: 8px;
+  }
+
+  .button-row button,
+  .hero-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  th,
+  td {
+    padding: 9px 10px;
+  }
+
+  .row-actions {
+    min-width: 110px;
+  }
+
+  .row-actions button {
+    width: 100%;
   }
 }

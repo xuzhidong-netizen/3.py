@@ -98,6 +98,10 @@
       margin-top: 14px;
     }
 
+    .buttons button {
+      flex: 0 1 auto;
+    }
+
     button {
       border: 0;
       border-radius: 999px;
@@ -294,6 +298,86 @@
       .preview-grid { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
     }
+
+    @media (max-width: 900px) {
+      .page {
+        gap: 16px;
+        padding: 14px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .fields {
+        grid-template-columns: 1fr;
+      }
+
+      .fields label:first-child,
+      .fields label:last-child {
+        grid-column: auto;
+      }
+
+      .buttons button {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 140px;
+      }
+
+      .section-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero-right {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      #player {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 10px;
+      }
+
+      h1, h2 {
+        font-size: 24px;
+      }
+
+      .card {
+        border-radius: 18px;
+      }
+
+      .buttons {
+        gap: 8px;
+      }
+
+      .buttons button,
+      .hero-right button {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .hero-right {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        min-width: 720px;
+      }
+
+      th, td {
+        padding: 9px 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -344,8 +428,8 @@
           <button class="primary" id="loadBtn">读取文件</button>
           <button id="loadCloudBtn">加载云端前3首示例</button>
           <button id="downloadCloudBtn">下载前3首示例包</button>
-          <button id="loadCloudFullBtn">加载云端全部示例</button>
-          <button id="downloadCloudFullBtn">下载全部示例包</button>
+          <button id="loadCloudFullBtn">加载云端全部示范舞曲</button>
+          <button id="downloadCloudFullBtn">下载全部示范舞曲包</button>
           <button id="checkBtn">检查排曲</button>
           <button id="addPartBtn">增加分场</button>
           <button id="addSongBtn">增加舞曲</button>
@@ -465,7 +549,7 @@
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const CLOUD_SAMPLE_URL = "./web_static/示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "./cloud_sample.json";
-    const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
+    const CLOUD_FULL_URL = "./web_static/示范舞曲.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
 
     const state = {
@@ -479,6 +563,17 @@
     const els = {};
 
     function $(id) { return document.getElementById(id); }
+
+    function triggerDownload(url, filename) {
+      const link = document.createElement("a");
+      link.href = url;
+      if (filename) link.download = filename;
+      link.target = "_blank";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
 
     function initEls() {
       ["fileInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","songsBody","player","preview","snapshotCaption"].forEach(id => els[id] = $(id));
@@ -1062,14 +1157,14 @@
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已打开示例包下载链接`);
-        window.open(CLOUD_SAMPLE_URL, "_blank");
+        triggerDownload(CLOUD_SAMPLE_URL, "示范舞曲-top3.zip");
       }));
-      $("downloadCloudBtn").addEventListener("click", () => window.open(CLOUD_SAMPLE_URL, "_blank"));
+      $("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, "示范舞曲-top3.zip"));
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
         log(`${err.message}，已打开全部示例包下载链接`);
-        window.open(CLOUD_FULL_URL, "_blank");
+        triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip");
       }));
-      $("downloadCloudFullBtn").addEventListener("click", () => window.open(CLOUD_FULL_URL, "_blank"));
+      $("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip"));
       $("checkBtn").addEventListener("click", validateRules);
       $("addPartBtn").addEventListener("click", addPart);
       $("addSongBtn").addEventListener("click", () => addSong().catch(err => log(err.message)));
