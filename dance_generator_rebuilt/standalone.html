@@ -42,7 +42,6 @@
       display: grid;
       gap: 16px;
       align-content: start;
-      min-width: 0;
     }
 
     .card {
@@ -174,11 +173,6 @@
       justify-content: space-between;
       gap: 16px;
       align-items: center;
-      overflow: hidden;
-    }
-
-    .hero > div {
-      min-width: 0;
     }
 
     .hero-right {
@@ -187,13 +181,10 @@
       align-items: center;
       flex-wrap: wrap;
       justify-content: flex-end;
-      min-width: 0;
     }
 
     .table-wrap {
       overflow: auto;
-      max-width: 100%;
-      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -517,18 +508,6 @@
 
       .stats {
         grid-template-columns: 1fr;
-      }
-
-      .hero > div,
-      .section-head,
-      .section-head .hint {
-        width: 100%;
-        min-width: 0;
-      }
-
-      .section-head .hint {
-        display: block;
-        word-break: break-word;
       }
 
       table {

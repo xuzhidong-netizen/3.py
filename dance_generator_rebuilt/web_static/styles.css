@@ -46,7 +46,6 @@ select {
   display: grid;
   gap: 16px;
   align-content: start;
-  min-width: 0;
 }
 
 .panel-head h1,
@@ -232,11 +231,6 @@ button.primary {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  overflow: hidden;
-}
-
-.hero > div {
-  min-width: 0;
 }
 
 .hero-actions {
@@ -244,18 +238,14 @@ button.primary {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  min-width: 0;
 }
 
 #audioPlayer {
   width: min(360px, 100%);
-  min-width: 0;
 }
 
 .table-wrap {
   overflow: auto;
-  max-width: 100%;
-  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -450,7 +440,6 @@ tr.part-row td {
 
   .hero-actions {
     width: 100%;
-    justify-content: flex-start;
   }
 
   #audioPlayer {
@@ -495,18 +484,6 @@ tr.part-row td {
 
   .stat-strip {
     grid-template-columns: 1fr;
-  }
-
-  .hero > div,
-  .section-title,
-  .section-title span {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .section-title span {
-    display: block;
-    word-break: break-word;
   }
 
   table {
