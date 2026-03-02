@@ -6,7 +6,7 @@
   "place": "老年活动中心",
   "date": "2026年03月02日",
   "time": ["周一", "19:00"],
-  "download_url": "/static/1.24-top5.zip",
+  "download_url": "/static/1.24-top3.zip",
   "tracks": [
     {
       "num": 1,
@@ -43,30 +43,6 @@
       "asset_name": "03-并四-慢热-满舒克.mp3",
       "audio_url": "",
       "source": "03-并四-慢热-满舒克.mp3"
-    },
-    {
-      "num": 4,
-      "dance": "平四",
-      "title": "生生世世爱",
-      "other": "吴雨霏",
-      "choose": false,
-      "duration": 210,
-      "part_title": "",
-      "asset_name": "04-平四-生生世世爱-吴雨霏.mp3",
-      "audio_url": "",
-      "source": "04-平四-生生世世爱-吴雨霏.mp3"
-    },
-    {
-      "num": 5,
-      "dance": "慢三",
-      "title": "飘摇",
-      "other": "周迅",
-      "choose": false,
-      "duration": 210,
-      "part_title": "",
-      "asset_name": "05-慢三-飘摇-周迅.mp3",
-      "audio_url": "",
-      "source": "05-慢三-飘摇-周迅.mp3"
     }
   ]
 }

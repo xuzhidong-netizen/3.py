@@ -6,7 +6,7 @@ const CLUBS = [
 ];
 
 const PLACES = ["老年活动中心", "紫菘活动中心", "博士生之家", "韵苑体育馆", "西教工西厅", "东教工二楼"];
-const CLOUD_SAMPLE_URL = "/static/1.24-top5.zip";
+const CLOUD_SAMPLE_URL = "/static/1.24-top3.zip";
 const CLOUD_PLAYLIST_URL = "/static/cloud_sample.json";
 const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
 const CLOUD_FULL_PLAYLIST_URL = "/static/cloud_full.json";
@@ -448,7 +448,7 @@ async function loadCloudSample() {
     const playlist = await response.json();
     const playableTracks = (playlist.tracks || []).filter((track) => track.audio_url);
     if (!playableTracks.length) {
-      log("云端歌单暂未配置单曲直链，已打开前5首示例包下载链接");
+      log("云端歌单暂未配置单曲直链，已打开前3首示例包下载链接");
       window.open(playlist.download_url || CLOUD_SAMPLE_URL, "_blank");
       return;
     }

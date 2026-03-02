@@ -342,8 +342,8 @@
         </div>
         <div class="buttons">
           <button class="primary" id="loadBtn">读取文件</button>
-          <button id="loadCloudBtn">加载云端前5首示例</button>
-          <button id="downloadCloudBtn">下载前5首示例包</button>
+          <button id="loadCloudBtn">加载云端前3首示例</button>
+          <button id="downloadCloudBtn">下载前3首示例包</button>
           <button id="loadCloudFullBtn">加载云端全部示例</button>
           <button id="downloadCloudFullBtn">下载全部示例包</button>
           <button id="checkBtn">检查排曲</button>
@@ -463,7 +463,7 @@
     const BALLROOM = ["华尔兹", "探戈", "维也纳", "狐步", "快步", "国标伦巴", "国标恰恰", "桑巴", "牛仔", "斗牛", "阿根廷探戈"];
     const COLLECTIVE = ["青春16步", "花火16步", "32步", "64步", "兔子舞", "集体恰恰", "阿拉伯之夜", "马卡琳娜", "玛卡琳娜", "蒙古舞"];
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
-    const CLOUD_SAMPLE_URL = "./web_static/1.24-top5.zip";
+    const CLOUD_SAMPLE_URL = "./web_static/1.24-top3.zip";
     const CLOUD_PLAYLIST_URL = "./cloud_sample.json";
     const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
@@ -957,7 +957,7 @@
     }
 
     async function loadCloudSample() {
-      log("正在加载云端前5首示例歌单...");
+      log("正在加载云端前3首示例歌单...");
       const response = await fetch(CLOUD_PLAYLIST_URL, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("云端歌单读取失败");
@@ -966,7 +966,7 @@
       const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
       const playableTracks = tracks.filter(track => track.audio_url);
       if (!playableTracks.length) {
-        log("云端歌单暂未配置单曲直链，已为你打开前5首示例包下载链接");
+        log("云端歌单暂未配置单曲直链，已为你打开前3首示例包下载链接");
         window.open(playlist.download_url || CLOUD_SAMPLE_URL, "_blank");
         return;
       }
@@ -992,7 +992,7 @@
       renumber();
       state.issues = [];
       renderAll();
-      log(`已导入云端前5首示例歌单 ${allSongs().length} 首`);
+      log(`已导入云端前3首示例歌单 ${allSongs().length} 首`);
     }
 
     async function loadCloudFullSample() {
