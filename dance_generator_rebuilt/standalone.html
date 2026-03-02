@@ -761,10 +761,16 @@
 
     function updatePlayingRow() {
       const activeNum = state.currentAudioIndex + 1;
+      let activeRow = null;
       [...els.songsBody.querySelectorAll(".song-row")].forEach(row => {
         const rowNum = Number(row.dataset.num || "0");
-        row.classList.toggle("is-playing", rowNum === activeNum);
+        const isActive = rowNum === activeNum;
+        row.classList.toggle("is-playing", isActive);
+        if (isActive) activeRow = row;
       });
+      if (activeRow) {
+        activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
 
     function playSongAtIndex(index, sequenceMode = state.sequenceMode) {

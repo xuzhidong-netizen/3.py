@@ -163,10 +163,16 @@ function renderExports() {
 
 function updatePlayingRow() {
   const activeNum = state.currentAudioIndex + 1;
+  let activeRow = null;
   [...el.songsBody.querySelectorAll(".song-row")].forEach((row) => {
     const rowNum = Number(row.querySelector("[data-num]")?.textContent || "0");
-    row.classList.toggle("is-playing", rowNum === activeNum);
+    const isActive = rowNum === activeNum;
+    row.classList.toggle("is-playing", isActive);
+    if (isActive) activeRow = row;
   });
+  if (activeRow) {
+    activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 function renderTable() {
