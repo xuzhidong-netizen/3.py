@@ -312,6 +312,10 @@
             <input id="fileInput" type="file" webkitdirectory multiple>
           </label>
           <label>
+            <span>默认目录提示</span>
+            <input value="/Users/zhidongxu/Downloads/1.24" readonly>
+          </label>
+          <label>
             <span>标题</span>
             <input id="titleInput" value="青春舞会舞曲">
           </label>
@@ -342,6 +346,8 @@
         </div>
         <div class="buttons">
           <button class="primary" id="loadBtn">读取文件</button>
+          <button id="loadCloudBtn">加载云端示例舞曲</button>
+          <button id="downloadCloudBtn">下载示例包</button>
           <button id="checkBtn">检查排曲</button>
           <button id="addPartBtn">增加分场</button>
           <button id="addSongBtn">增加舞曲</button>
@@ -445,6 +451,7 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const CLUBS = [
       "华中大国际标准交谊舞俱乐部",
@@ -458,6 +465,7 @@
     const BALLROOM = ["华尔兹", "探戈", "维也纳", "狐步", "快步", "国标伦巴", "国标恰恰", "桑巴", "牛仔", "斗牛", "阿根廷探戈"];
     const COLLECTIVE = ["青春16步", "花火16步", "32步", "64步", "兔子舞", "集体恰恰", "阿拉伯之夜", "马卡琳娜", "玛卡琳娜", "蒙古舞"];
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
+    const CLOUD_SAMPLE_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
 
     const state = {
       parts: [{ part_title: "", music: [] }],
@@ -931,6 +939,52 @@
       log(`已读取 ${allSongs().length} 首舞曲`);
     }
 
+    async function loadCloudSample() {
+      if (typeof JSZip === "undefined") {
+        log("云端示例功能加载失败，已为你打开下载链接");
+        window.open(CLOUD_SAMPLE_URL, "_blank");
+        return;
+      }
+      log("正在加载云端示例舞曲包...");
+      const response = await fetch(CLOUD_SAMPLE_URL);
+      if (!response.ok) {
+        throw new Error("云端示例包下载失败");
+      }
+      const blob = await response.blob();
+      const zip = await JSZip.loadAsync(blob);
+      const entries = Object.values(zip.files).filter(entry => !entry.dir && /\.(mp3|wma|ogg|m4a|flac)$/i.test(entry.name));
+      if (!entries.length) {
+        throw new Error("示例包中没有可用音频文件");
+      }
+      state.parts = [];
+      let currentPart = null;
+      let currentFolder = null;
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const content = await entry.async("blob");
+        const relativeName = entry.name.split("/").slice(1).join("/") || entry.name;
+        const filename = relativeName.split("/").pop();
+        const file = new File([content], filename, { type: content.type || "audio/mpeg" });
+        Object.defineProperty(file, "webkitRelativePath", {
+          value: relativeName,
+          configurable: true
+        });
+        const song = await parseSong(file, i);
+        song.source = relativeName;
+        const folder = relativeName.includes("/") ? relativeName.split("/").slice(-2, -1)[0] : "";
+        if (!currentPart || folder !== currentFolder) {
+          currentFolder = folder;
+          currentPart = { part_title: folder, music: [] };
+          state.parts.push(currentPart);
+        }
+        currentPart.music.push(song);
+      }
+      renumber();
+      state.issues = [];
+      renderAll();
+      log(`已导入云端示例舞曲 ${allSongs().length} 首`);
+    }
+
     function addPart() {
       syncStateFromTable();
       state.parts.push({ part_title: `分场${state.parts.length + 1}`, music: [] });
@@ -957,6 +1011,11 @@
 
     function bindTopActions() {
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
+      $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
+        log(`${err.message}，已打开示例包下载链接`);
+        window.open(CLOUD_SAMPLE_URL, "_blank");
+      }));
+      $("downloadCloudBtn").addEventListener("click", () => window.open(CLOUD_SAMPLE_URL, "_blank"));
       $("checkBtn").addEventListener("click", validateRules);
       $("addPartBtn").addEventListener("click", addPart);
       $("addSongBtn").addEventListener("click", () => addSong().catch(err => log(err.message)));

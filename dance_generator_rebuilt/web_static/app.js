@@ -6,6 +6,8 @@ const CLUBS = [
 ];
 
 const PLACES = ["老年活动中心", "紫菘活动中心", "博士生之家", "韵苑体育馆", "西教工西厅", "东教工二楼"];
+const DEFAULT_MUSIC_PATH = "/Users/zhidongxu/Downloads/1.24";
+const CLOUD_SAMPLE_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
 
 const state = {
   danceList: null,
@@ -69,7 +71,7 @@ function collectMeta() {
 
 function syncMetaFromState() {
   if (!state.danceList) return;
-  el.pathInput.value = state.danceList.path || "";
+  el.pathInput.value = state.danceList.path || DEFAULT_MUSIC_PATH;
   el.titleInput.value = state.danceList.title || "";
   el.authorInput.value = state.danceList.name || "";
   el.clubInput.value = state.danceList.club || CLUBS[0];
@@ -247,7 +249,7 @@ async function handleLoad() {
   const data = await api("/api/load", {
     method: "POST",
     body: JSON.stringify({
-      path: el.pathInput.value.trim(),
+      path: el.pathInput.value.trim() || DEFAULT_MUSIC_PATH,
       meta: collectMeta(),
     }),
   });
@@ -396,6 +398,8 @@ function startSequencePlayback() {
 
 function wireButtons() {
   document.getElementById("loadBtn").addEventListener("click", () => handleLoad().catch((error) => log(error.message)));
+  document.getElementById("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch((error) => log(error.message)));
+  document.getElementById("downloadCloudBtn").addEventListener("click", () => window.open(CLOUD_SAMPLE_URL, "_blank"));
   document.getElementById("syncBtn").addEventListener("click", () => refreshState().then(() => log("列表已更新")).catch((error) => log(error.message)));
   document.getElementById("checkBtn").addEventListener("click", () => handleCheck().catch((error) => log(error.message)));
   document.getElementById("exportBtn").addEventListener("click", () => handleExport().catch((error) => log(error.message)));
@@ -429,6 +433,11 @@ function wireButtons() {
 function initDefaults() {
   fillSelect(el.clubInput, CLUBS);
   fillSelect(el.placeInput, PLACES);
+}
+
+async function loadCloudSample() {
+  log("云端示例包是公开 zip，当前 Web 版先提供直接下载入口");
+  window.open(CLOUD_SAMPLE_URL, "_blank");
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
