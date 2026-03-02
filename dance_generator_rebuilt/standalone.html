@@ -290,16 +290,155 @@
       gap: 16px;
     }
 
+    .snapshot-card {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(179,72,45,0.14), transparent 30%),
+        linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,241,232,0.98));
+    }
+
+    .snapshot-stage {
+      position: relative;
+      min-height: 320px;
+      border-radius: 18px;
+      border: 1px solid rgba(29,35,31,0.08);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,234,220,0.92)),
+        linear-gradient(90deg, rgba(179,72,45,0.08), transparent 40%);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+    }
+
+    .snapshot-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.58) 45%, transparent 70%);
+      transform: translateX(-140%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .snapshot-stage::after {
+      content: "";
+      position: absolute;
+      inset: auto 18px 18px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(179,72,45,0.16), rgba(223,125,70,0.52), rgba(125,45,24,0.16));
+      opacity: 0;
+      transform: scaleX(0.2);
+      transform-origin: left center;
+      transition: opacity 220ms ease, transform 420ms ease;
+    }
+
+    .snapshot-stage.is-generating::before {
+      opacity: 1;
+      animation: snapshotSweep 1.5s linear infinite;
+    }
+
+    .snapshot-stage.is-generating::after {
+      opacity: 1;
+      animation: snapshotProgress 1.2s ease-in-out infinite;
+    }
+
+    .snapshot-stage.is-ready::after {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+
+    .snapshot-placeholder {
+      position: absolute;
+      inset: 18px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .snapshot-placeholder strong {
+      display: block;
+      color: var(--ink);
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .snapshot-placeholder span {
+      display: block;
+      line-height: 1.6;
+    }
+
+    .snapshot-stage.has-image .snapshot-placeholder {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
     #preview {
       width: 100%;
       display: none;
       border-radius: 16px;
       border: 1px solid var(--line);
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 24px 40px rgba(52, 34, 18, 0.14);
+      transform: translateY(18px) scale(0.985);
+      opacity: 0;
+    }
+
+    .snapshot-stage.has-image #preview {
+      display: block;
+      animation: snapshotReveal 520ms cubic-bezier(.2,.8,.2,1) forwards;
+    }
+
+    .snapshot-btn {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .snapshot-btn.is-generating {
+      background: linear-gradient(135deg, #7d2d18, #df7d46);
+      pointer-events: none;
+    }
+
+    .snapshot-btn.is-generating::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.42) 48%, transparent 76%);
+      animation: snapshotSweep 1.2s linear infinite;
     }
 
     .code {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       word-break: break-all;
+    }
+
+    @keyframes snapshotSweep {
+      from { transform: translateX(-140%); }
+      to { transform: translateX(140%); }
+    }
+
+    @keyframes snapshotProgress {
+      0% { transform: scaleX(0.22); opacity: 0.52; }
+      50% { transform: scaleX(0.76); opacity: 1; }
+      100% { transform: scaleX(0.28); opacity: 0.6; }
+    }
+
+    @keyframes snapshotReveal {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     @media (max-width: 1100px) {
@@ -533,12 +672,20 @@
       </section>
 
       <section class="preview-grid">
-        <section class="card">
+        <section class="card snapshot-card">
           <div class="section-head">
             <h2>页面快照</h2>
             <span id="snapshotCaption">未生成</span>
           </div>
-          <img id="preview" alt="snapshot">
+          <div class="snapshot-stage" id="snapshotStage">
+            <div class="snapshot-placeholder" id="snapshotPlaceholder">
+              <div>
+                <strong>舞曲舞台预览</strong>
+                <span>点击“生成页面快照”后，这里会展示一张带动效入场的页面快照。</span>
+              </div>
+            </div>
+            <img id="preview" alt="snapshot">
+          </div>
         </section>
 
         <section class="card">
@@ -598,7 +745,7 @@
     }
 
     function initEls() {
-      ["fileInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","songsBody","player","preview","snapshotCaption"].forEach(id => els[id] = $(id));
+      ["fileInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","snapshotBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -1029,21 +1176,37 @@
     }
 
     async function buildSnapshot() {
-      const node = document.querySelector(".workspace");
-      const clone = node.cloneNode(true);
-      clone.querySelectorAll("audio,button").forEach(el => el.remove());
-      const wrapper = document.createElement("div");
-      wrapper.style.width = "1200px";
-      wrapper.style.padding = "24px";
-      wrapper.style.background = "#fffaf2";
-      wrapper.appendChild(clone);
-      const data = new XMLSerializer().serializeToString(wrapper);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1248" height="1600"><foreignObject width="100%" height="100%">${data.replace(/#/g, "%23").replace(/\n/g, " ")}</foreignObject></svg>`;
-      const url = "data:image/svg+xml;charset=utf-8," + svg;
-      els.preview.src = url;
-      els.preview.style.display = "block";
-      els.snapshotCaption.textContent = "已生成浏览器内快照";
-      log("已生成页面快照");
+      els.snapshotBtn.classList.add("is-generating");
+      els.snapshotStage.classList.remove("has-image", "is-ready");
+      els.snapshotStage.classList.add("is-generating");
+      els.snapshotCaption.textContent = "正在生成快照...";
+      els.snapshotPlaceholder.innerHTML = `<div><strong>快照渲染中</strong><span>正在整理工作台布局、标题信息和舞曲表，请稍候片刻。</span></div>`;
+      try {
+        const node = document.querySelector(".workspace");
+        const clone = node.cloneNode(true);
+        clone.querySelectorAll("audio,button").forEach(el => el.remove());
+        const wrapper = document.createElement("div");
+        wrapper.style.width = "1200px";
+        wrapper.style.padding = "24px";
+        wrapper.style.background = "#fffaf2";
+        wrapper.appendChild(clone);
+        const data = new XMLSerializer().serializeToString(wrapper);
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1248" height="1600"><foreignObject width="100%" height="100%">${data.replace(/#/g, "%23").replace(/\n/g, " ")}</foreignObject></svg>`;
+        const url = "data:image/svg+xml;charset=utf-8," + svg;
+        els.preview.src = url;
+        els.snapshotStage.classList.remove("is-generating");
+        els.snapshotStage.classList.add("has-image", "is-ready");
+        els.snapshotCaption.textContent = "已生成动态预览快照";
+        els.snapshotPlaceholder.innerHTML = `<div><strong>快照已就绪</strong><span>当前舞曲工作台已被定格为一张浏览器内预览图，可直接查看排版效果。</span></div>`;
+        log("已生成页面快照");
+      } catch (error) {
+        els.snapshotStage.classList.remove("is-generating");
+        els.snapshotCaption.textContent = "快照生成失败";
+        els.snapshotPlaceholder.innerHTML = `<div><strong>生成失败</strong><span>${error.message || "浏览器当前无法完成快照渲染，请稍后重试。"}</span></div>`;
+        throw error;
+      } finally {
+        els.snapshotBtn.classList.remove("is-generating");
+      }
     }
 
     async function loadFiles() {
