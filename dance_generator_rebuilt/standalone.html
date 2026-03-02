@@ -712,6 +712,7 @@
     let stageWindow = null;
     let stageChannel = null;
     let stageControlChannel = null;
+    let nextLocalSongId = 1;
 
     function $(id) { return document.getElementById(id); }
 
@@ -777,6 +778,7 @@
 
     function buildCloudSong(track, index) {
       return {
+        id: track.id || `song-${nextLocalSongId++}`,
         num: track.num ?? index + 1,
         dance: track.dance || "",
         title: track.title || "",
@@ -857,6 +859,7 @@
       }
 
       return {
+        id: `song-${nextLocalSongId++}`,
         num,
         dance,
         title,
@@ -971,7 +974,7 @@
         }
         part.music.forEach(song => {
           rows.push(`
-            <tr class="song-row" draggable="true" data-type="song" data-num="${song.num}">
+            <tr class="song-row" draggable="true" data-type="song" data-num="${song.num}" data-song-id="${song.id}">
               <td>${song.num}</td>
               <td><input class="inline-input title" value="${song.title}"></td>
               <td><input class="inline-input dance" value="${song.dance}"></td>
@@ -991,7 +994,7 @@
       const rows = [...els.songsBody.querySelectorAll("tr")];
       const parts = [];
       let currentPart = null;
-      let songIndex = 0;
+      const songMap = new Map(allSongs().map(song => [song.id, song]));
       rows.forEach(row => {
         if (row.dataset.type === "part") {
           currentPart = { part_title: row.querySelector(".part-title").value.trim(), music: [] };
@@ -1001,7 +1004,8 @@
             currentPart = { part_title: "", music: [] };
             parts.push(currentPart);
           }
-          const original = allSongs()[songIndex++];
+          const original = songMap.get(row.dataset.songId);
+          if (!original) return;
           original.title = row.querySelector(".title").value.trim();
           original.dance = row.querySelector(".dance").value.trim();
           original.choose = row.querySelector(".choose").checked;
