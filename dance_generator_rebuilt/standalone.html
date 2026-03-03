@@ -1049,6 +1049,54 @@
       link.remove();
     }
 
+    function createLogEntry(message) {
+      const div = document.createElement("div");
+      div.className = "log-entry";
+      div.textContent = message;
+      els.log.prepend(div);
+      return div;
+    }
+
+    function clampPercent(value) {
+      return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    }
+
+    function formatBytes(value) {
+      const bytes = Number(value || 0);
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+      const units = ["B", "KB", "MB", "GB"];
+      let size = bytes;
+      let index = 0;
+      while (size >= 1024 && index < units.length - 1) {
+        size /= 1024;
+        index += 1;
+      }
+      const digits = size >= 100 || index === 0 ? 0 : size >= 10 ? 1 : 2;
+      return `${size.toFixed(digits)} ${units[index]}`;
+    }
+
+    function createProgressLogger(label) {
+      const entry = createLogEntry(`${label} 0%`);
+      let lastText = entry.textContent;
+      return {
+        update(percent, detail = "") {
+          const nextText = `${label} ${clampPercent(percent)}%${detail ? ` · ${detail}` : ""}`;
+          if (nextText === lastText) return;
+          entry.textContent = nextText;
+          lastText = nextText;
+        },
+        done(detail = "已完成") {
+          this.update(100, detail);
+        },
+        fail(detail = "失败") {
+          const nextText = `${label} 失败${detail ? ` · ${detail}` : ""}`;
+          if (nextText === lastText) return;
+          entry.textContent = nextText;
+          lastText = nextText;
+        }
+      };
+    }
+
     function resolveCloudAssetUrl(assetUrl, playlistUrl, fallbackUrl = "") {
       const candidate = String(assetUrl || "").trim();
       if (candidate) {
@@ -1097,10 +1145,7 @@
     }
 
     function log(message) {
-      const div = document.createElement("div");
-      div.className = "log-entry";
-      div.textContent = message;
-      els.log.prepend(div);
+      createLogEntry(message);
     }
 
     function arrangementSummaryText() {
@@ -1311,13 +1356,18 @@
       return segments[segments.length - 2] || "";
     }
 
-    async function extractArchiveFiles(archiveFiles) {
+    async function extractArchiveFiles(archiveFiles, progress = null) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
       const extracted = [];
-      for (const archiveFile of archiveFiles) {
+      for (let archiveIndex = 0; archiveIndex < archiveFiles.length; archiveIndex += 1) {
+        const archiveFile = archiveFiles[archiveIndex];
         const archiveBase = archiveFile.name.replace(/\.zip$/i, "") || "压缩包";
+        progress?.update(
+          10 + Math.floor((archiveIndex / Math.max(archiveFiles.length, 1)) * 15),
+          `正在读取压缩包 ${archiveIndex + 1}/${archiveFiles.length}：${archiveFile.name}`
+        );
         const zip = await JSZip.loadAsync(await archiveFile.arrayBuffer());
         const entries = Object.values(zip.files)
           .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
@@ -1331,7 +1381,8 @@
           log(`${archiveFile.name} 中没有可导入的音频文件`);
           continue;
         }
-        for (const entry of entries) {
+        for (let entryIndex = 0; entryIndex < entries.length; entryIndex += 1) {
+          const entry = entries[entryIndex];
           const blob = await entry.async("blob");
           const fileName = entry.name.split("/").pop() || `song-${extracted.length + 1}.mp3`;
           const file = new File([blob], fileName, {
@@ -1340,14 +1391,18 @@
           });
           file.relativePath = normalizePath(`${archiveBase}/${entry.name}`);
           extracted.push(file);
+          progress?.update(
+            25,
+            `正在解压 ${archiveFile.name} ${entryIndex + 1}/${entries.length}`
+          );
         }
         log(`已在浏览器中解压 ${archiveFile.name}，得到 ${entries.length} 首舞曲`);
       }
       return extracted;
     }
 
-    async function fetchArchiveBuffer(archiveUrl, label, fallbackUrl = "") {
-      const attemptFetch = async (targetUrl, timeoutMs) => {
+    async function fetchArchiveBuffer(archiveUrl, label, fallbackUrl = "", progress = null) {
+      const attemptFetch = async (targetUrl, timeoutMs, sourceLabel) => {
         const controller = new AbortController();
         const timer = window.setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -1355,18 +1410,67 @@
           if (!response.ok) {
             throw new Error(`${label}压缩包读取失败`);
           }
-          return await response.arrayBuffer();
+          const totalBytes = Number(response.headers.get("content-length")) || 0;
+          if (!response.body || typeof response.body.getReader !== "function") {
+            progress?.update(
+              58,
+              totalBytes
+                ? `${sourceLabel}下载完成 ${formatBytes(totalBytes)}`
+                : `${sourceLabel}下载完成`
+            );
+            return await response.arrayBuffer();
+          }
+
+          const reader = response.body.getReader();
+          const chunks = [];
+          const chunkLengths = [];
+          let receivedBytes = 0;
+          let nextUnboundedLog = 512 * 1024;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (!value) continue;
+            chunks.push(value);
+            chunkLengths.push(value.byteLength);
+            receivedBytes += value.byteLength;
+            if (totalBytes > 0) {
+              const ratio = Math.min(receivedBytes / totalBytes, 1);
+              progress?.update(
+                18 + Math.round(ratio * 40),
+                `正在下载${sourceLabel} ${Math.round(ratio * 100)}% (${formatBytes(receivedBytes)} / ${formatBytes(totalBytes)})`
+              );
+            } else if (receivedBytes >= nextUnboundedLog) {
+              nextUnboundedLog += 512 * 1024;
+              progress?.update(38, `正在下载${sourceLabel} ${formatBytes(receivedBytes)}`);
+            }
+          }
+
+          const merged = new Uint8Array(receivedBytes);
+          let offset = 0;
+          chunks.forEach((chunk, index) => {
+            merged.set(chunk, offset);
+            offset += chunkLengths[index];
+          });
+          progress?.update(
+            58,
+            totalBytes
+              ? `${sourceLabel}下载完成 ${formatBytes(receivedBytes)}`
+              : `${sourceLabel}下载完成 ${formatBytes(receivedBytes)}`
+          );
+          return merged.buffer;
         } finally {
           window.clearTimeout(timer);
         }
       };
 
       try {
-        return await attemptFetch(archiveUrl, 15000);
+        return await attemptFetch(archiveUrl, 15000, "远端压缩包");
       } catch (error) {
         if (fallbackUrl && fallbackUrl !== archiveUrl) {
           log(`${label}远端压缩包较慢，改用站内备用包继续加载`);
-          return await attemptFetch(fallbackUrl, 15000);
+          progress?.update(15, "远端较慢，正在切换站内备用包");
+          return await attemptFetch(fallbackUrl, 15000, "站内备用包");
         }
         if (error?.name === "AbortError") {
           throw new Error(`${label}压缩包读取超时，请点击下载按钮`);
@@ -1375,11 +1479,12 @@
       }
     }
 
-    async function loadPlaylistArchive(playlist, archiveUrl, label, fallbackUrl = "") {
+    async function loadPlaylistArchive(playlist, archiveUrl, label, fallbackUrl = "", progress = null) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
-      const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, fallbackUrl);
+      const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, fallbackUrl, progress);
+      progress?.update(62, "正在解析压缩包目录");
       const zip = await JSZip.loadAsync(archiveBuffer);
       const entries = Object.values(zip.files)
         .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
@@ -1400,6 +1505,7 @@
 
       for (let index = 0; index < entries.length; index += 1) {
         const entry = entries[index];
+        progress?.update(68 + Math.round(((index + 1) / entries.length) * 24), `正在导入舞曲 ${index + 1}/${entries.length}`);
         const blob = await entry.async("blob");
         const fileName = (entry.name.split("/").pop() || `sample-${index + 1}.mp3`).replace(/\\/g, "/");
         const file = new File([blob], fileName, { type: blob.type || "audio/mpeg", lastModified: Date.now() });
@@ -1433,6 +1539,7 @@
       applyPlaylistMeta(playlist);
       renumber();
       state.issues = [];
+      progress?.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
       renderAll();
       log(`已从压缩包导入${label} ${allSongs().length} 首`);
       await syncSongsToDanceLibrary(`导入${label}`);
@@ -3115,44 +3222,81 @@
       URL.revokeObjectURL(url);
     }
 
+    async function downloadSmallArchive(url, filename, label) {
+      const progress = createProgressLogger(`${label}进度`);
+      progress.update(5, "正在准备下载");
+      try {
+        const archiveBuffer = await fetchArchiveBuffer(url, label, "", progress);
+        progress.update(94, "正在生成浏览器下载文件");
+        const blob = new Blob([archiveBuffer], { type: "application/zip" });
+        const objectUrl = URL.createObjectURL(blob);
+        triggerDownload(objectUrl, filename);
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        progress.done("已开始浏览器下载");
+      } catch (error) {
+        progress.fail(error.message || error);
+        triggerDownload(url, filename);
+        log(`${label}已改为直接打开浏览器下载链接`);
+      }
+    }
+
+    function openDirectDownload(url, filename, label) {
+      const progress = createProgressLogger(`${label}进度`);
+      progress.update(20, "正在准备下载链接");
+      triggerDownload(url, filename);
+      progress.done("已交给浏览器下载");
+    }
+
     async function loadFiles() {
+      const progress = createProgressLogger("读取舞曲进度");
       const audioFiles = [...els.fileInput.files].filter(file => AUDIO_FILE_PATTERN.test(file.name));
       const archiveFiles = [...els.archiveInput.files].filter(file => /\.zip$/i.test(file.name));
       if (!audioFiles.length && !archiveFiles.length) {
+        progress.fail("没有可读取的文件");
         log("没有可读取的音频文件或 ZIP 压缩包");
         return;
       }
-      const files = [...audioFiles];
-      if (archiveFiles.length) {
-        files.push(...await extractArchiveFiles(archiveFiles));
-      }
-      if (!files.length) {
-        log("没有可导入的舞曲文件");
-        return;
-      }
-      cleanupSongUrls();
-      state.parts = [];
-      let currentPart = null;
-      let currentFolder = null;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const song = await parseSong(file, i);
-        const rel = fileRelativePath(file) || file.name;
-        const folder = createPartTitleFromPath(rel);
-        if (!currentPart || folder !== currentFolder) {
-          currentFolder = folder;
-          currentPart = { part_title: folder, music: [] };
-          state.parts.push(currentPart);
+      try {
+        progress.update(5, `已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`);
+        const files = [...audioFiles];
+        if (archiveFiles.length) {
+          files.push(...await extractArchiveFiles(archiveFiles, progress));
         }
-        currentPart.music.push(song);
+        if (!files.length) {
+          progress.fail("没有可导入的舞曲文件");
+          log("没有可导入的舞曲文件");
+          return;
+        }
+        cleanupSongUrls();
+        state.parts = [];
+        let currentPart = null;
+        let currentFolder = null;
+        for (let i = 0; i < files.length; i++) {
+          progress.update(30 + Math.round(((i + 1) / files.length) * 58), `正在解析舞曲 ${i + 1}/${files.length}`);
+          const file = files[i];
+          const song = await parseSong(file, i);
+          const rel = fileRelativePath(file) || file.name;
+          const folder = createPartTitleFromPath(rel);
+          if (!currentPart || folder !== currentFolder) {
+            currentFolder = folder;
+            currentPart = { part_title: folder, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(song);
+        }
+        renumber();
+        state.issues = [];
+        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
+        renderAll();
+        log(`已读取 ${allSongs().length} 首舞曲`);
+        els.fileInput.value = "";
+        els.archiveInput.value = "";
+        await syncSongsToDanceLibrary("读取文件");
+        progress.done(`已完成，共 ${allSongs().length} 首`);
+      } catch (error) {
+        progress.fail(error.message || error);
+        throw error;
       }
-      renumber();
-      state.issues = [];
-      renderAll();
-      log(`已读取 ${allSongs().length} 首舞曲`);
-      els.fileInput.value = "";
-      els.archiveInput.value = "";
-      await syncSongsToDanceLibrary("读取文件");
     }
 
     function scheduleAutoLoad(sourceLabel) {
@@ -3184,78 +3328,109 @@
     }
 
     async function loadCloudSample() {
+      const progress = createProgressLogger("加载前3首示例进度");
       log("正在加载云端前3首示例舞曲...");
-      const playlistUrl = CLOUD_PLAYLIST_URL;
-      const response = await fetch(playlistUrl, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("云端歌单读取失败");
-      }
-      const playlist = await response.json();
-      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
-      const playableTracks = tracks.filter(track => track.audio_url);
-      if (!playableTracks.length) {
-        await loadPlaylistArchive(
-          playlist,
-          resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_SAMPLE_URL),
-          "前3首示范舞曲",
-          CLOUD_SAMPLE_FALLBACK_URL
-        );
-        return;
-      }
-      cleanupSongUrls();
-      state.parts = [];
-      let currentPart = null;
-      let currentPartTitle = null;
-      playableTracks.forEach((track, index) => {
-        const partTitle = track.part_title || "";
-        if (!currentPart || partTitle !== currentPartTitle) {
-          currentPartTitle = partTitle;
-          currentPart = { part_title: partTitle, music: [] };
-          state.parts.push(currentPart);
+      try {
+        const playlistUrl = CLOUD_PLAYLIST_URL;
+        progress.update(8, "正在读取云端歌单");
+        const response = await fetch(playlistUrl, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("云端歌单读取失败");
         }
-        currentPart.music.push(buildCloudSong(track, index));
-      });
-      applyPlaylistMeta(playlist);
-      renumber();
-      state.issues = [];
-      renderAll();
-      log(`已导入云端前3首示例舞曲 ${allSongs().length} 首`);
-      await syncSongsToDanceLibrary("导入云端前3首示例舞曲");
+        const playlist = await response.json();
+        progress.update(14, "云端歌单读取完成");
+        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
+        const playableTracks = tracks.filter(track => track.audio_url);
+        if (!playableTracks.length) {
+          await loadPlaylistArchive(
+            playlist,
+            resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_SAMPLE_URL),
+            "前3首示范舞曲",
+            CLOUD_SAMPLE_FALLBACK_URL,
+            progress
+          );
+          progress.done(`已导入 ${allSongs().length} 首`);
+          return;
+        }
+        cleanupSongUrls();
+        state.parts = [];
+        let currentPart = null;
+        let currentPartTitle = null;
+        playableTracks.forEach((track, index) => {
+          progress.update(30 + Math.round(((index + 1) / playableTracks.length) * 58), `正在导入舞曲 ${index + 1}/${playableTracks.length}`);
+          const partTitle = track.part_title || "";
+          if (!currentPart || partTitle !== currentPartTitle) {
+            currentPartTitle = partTitle;
+            currentPart = { part_title: partTitle, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(buildCloudSong(track, index));
+        });
+        applyPlaylistMeta(playlist);
+        renumber();
+        state.issues = [];
+        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
+        renderAll();
+        log(`已导入云端前3首示例舞曲 ${allSongs().length} 首`);
+        await syncSongsToDanceLibrary("导入云端前3首示例舞曲");
+        progress.done(`已导入 ${allSongs().length} 首`);
+      } catch (error) {
+        progress.fail(error.message || error);
+        throw error;
+      }
     }
 
     async function loadCloudFullSample() {
+      const progress = createProgressLogger("加载全部示范舞曲进度");
       log("正在加载云端全部示范舞曲...");
-      const playlistUrl = CLOUD_FULL_PLAYLIST_URL;
-      const response = await fetch(playlistUrl, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("云端全部歌单读取失败");
-      }
-      const playlist = await response.json();
-      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
-      const playableTracks = tracks.filter(track => track.audio_url);
-      if (!playableTracks.length) {
-        await loadPlaylistArchive(playlist, resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_FULL_URL), "示范舞曲包");
-        return;
-      }
-      cleanupSongUrls();
-      state.parts = [];
-      let currentPart = null;
-      let currentPartTitle = null;
-      playableTracks.forEach((track, index) => {
-        const partTitle = track.part_title || "";
-        if (!currentPart || partTitle !== currentPartTitle) {
-          currentPartTitle = partTitle;
-          currentPart = { part_title: partTitle, music: [] };
-          state.parts.push(currentPart);
+      try {
+        const playlistUrl = CLOUD_FULL_PLAYLIST_URL;
+        progress.update(8, "正在读取云端歌单");
+        const response = await fetch(playlistUrl, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("云端全部歌单读取失败");
         }
-        currentPart.music.push(buildCloudSong(track, index));
-      });
-      applyPlaylistMeta(playlist);
-      renumber();
-      state.issues = [];
-      renderAll();
-      log(`已导入云端全部示范舞曲 ${allSongs().length} 首`);
-      await syncSongsToDanceLibrary("导入云端全部示范舞曲");
+        const playlist = await response.json();
+        progress.update(14, "云端歌单读取完成");
+        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
+        const playableTracks = tracks.filter(track => track.audio_url);
+        if (!playableTracks.length) {
+          await loadPlaylistArchive(
+            playlist,
+            resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_FULL_URL),
+            "示范舞曲包",
+            "",
+            progress
+          );
+          progress.done(`已导入 ${allSongs().length} 首`);
+          return;
+        }
+        cleanupSongUrls();
+        state.parts = [];
+        let currentPart = null;
+        let currentPartTitle = null;
+        playableTracks.forEach((track, index) => {
+          progress.update(30 + Math.round(((index + 1) / playableTracks.length) * 58), `正在导入舞曲 ${index + 1}/${playableTracks.length}`);
+          const partTitle = track.part_title || "";
+          if (!currentPart || partTitle !== currentPartTitle) {
+            currentPartTitle = partTitle;
+            currentPart = { part_title: partTitle, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(buildCloudSong(track, index));
+        });
+        applyPlaylistMeta(playlist);
+        renumber();
+        state.issues = [];
+        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
+        renderAll();
+        log(`已导入云端全部示范舞曲 ${allSongs().length} 首`);
+        await syncSongsToDanceLibrary("导入云端全部示范舞曲");
+        progress.done(`已导入 ${allSongs().length} 首`);
+      } catch (error) {
+        progress.fail(error.message || error);
+        throw error;
+      }
     }
 
     function addPart() {
@@ -3309,16 +3484,14 @@
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
       }));
       $("downloadCloudBtn").addEventListener("click", () => {
-        log("已打开前3首示例舞曲下载链接");
-        triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
+        downloadSmallArchive(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME, "下载前3首示例舞曲");
       });
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
         log(`${err.message}，已为你打开全部示范舞曲下载链接`);
         triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       }));
       $("downloadCloudFullBtn").addEventListener("click", () => {
-        log("已打开全部示范舞曲下载链接");
-        triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
+        openDirectDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲");
       });
       $("libraryBtn").addEventListener("click", () => {
         try {
