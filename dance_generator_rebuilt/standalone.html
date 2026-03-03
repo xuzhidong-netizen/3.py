@@ -518,6 +518,86 @@
         linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,241,232,0.98));
     }
 
+    .meta-sync-note {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .meta-summary-card {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta-summary-hero {
+      padding: 18px 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(29,35,31,0.08);
+      background:
+        radial-gradient(circle at top right, rgba(223,125,70,0.16), transparent 35%),
+        linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,234,220,0.96));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    .meta-summary-label {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(179,72,45,0.1);
+      color: #8e4525;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-summary-title {
+      margin-top: 12px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .meta-summary-subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .meta-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meta-summary-item {
+      min-width: 0;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(29,35,31,0.08);
+      background: rgba(255,255,255,0.8);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.68);
+    }
+
+    .meta-summary-item small {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .meta-summary-item strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--ink);
+      word-break: break-word;
+    }
+
+    .snapshot-shell {
+      display: none;
+    }
+
     .snapshot-stage {
       position: relative;
       min-height: 320px;
@@ -714,6 +794,10 @@
       .hero-right {
         width: 100%;
         justify-content: flex-start;
+      }
+
+      .meta-summary-grid {
+        grid-template-columns: 1fr;
       }
 
       #player {
@@ -968,17 +1052,51 @@
       <section class="preview-grid">
         <section class="card snapshot-card">
           <div class="section-head">
-            <h2>大屏状态</h2>
-            <span id="snapshotCaption">未打开</span>
+            <h2>舞会信息</h2>
+            <span class="meta-sync-note">随上方输入实时同步</span>
           </div>
-          <div class="snapshot-stage" id="snapshotStage">
-            <div class="snapshot-placeholder" id="snapshotPlaceholder">
-              <div>
-                <strong>舞曲大屏展示</strong>
-                <span>点击“打开大屏页面”后会直接打开动态大屏，并且可以在大屏里切换 6 套不同风格。</span>
+          <div class="meta-summary-card">
+            <div class="meta-summary-hero">
+              <span class="meta-summary-label">当前展示信息</span>
+              <div class="meta-summary-title" id="metaSummaryTitle">青春舞会舞曲</div>
+              <div class="meta-summary-subtitle">
+                排曲人 <strong id="metaSummaryAuthor">冬冬</strong>
               </div>
             </div>
-            <img id="preview" alt="snapshot">
+            <div class="meta-summary-grid">
+              <div class="meta-summary-item">
+                <small>舞协</small>
+                <strong id="metaSummaryClub">华中大国际标准交谊舞俱乐部</strong>
+              </div>
+              <div class="meta-summary-item">
+                <small>地点</small>
+                <strong id="metaSummaryPlace">老年活动中心</strong>
+              </div>
+              <div class="meta-summary-item">
+                <small>日期</small>
+                <strong id="metaSummaryDate">2026年03月02日</strong>
+              </div>
+              <div class="meta-summary-item">
+                <small>星期</small>
+                <strong id="metaSummaryWeekday">周一</strong>
+              </div>
+              <div class="meta-summary-item">
+                <small>开始时间</small>
+                <strong id="metaSummaryTime">19:00</strong>
+              </div>
+            </div>
+          </div>
+          <div class="snapshot-shell" aria-hidden="true">
+            <span id="snapshotCaption">未打开</span>
+            <div class="snapshot-stage" id="snapshotStage">
+              <div class="snapshot-placeholder" id="snapshotPlaceholder">
+                <div>
+                  <strong>舞曲大屏展示</strong>
+                  <span>点击“打开大屏页面”后会直接打开动态大屏，并且可以在大屏里切换 6 套不同风格。</span>
+                </div>
+              </div>
+              <img id="preview" alt="snapshot">
+            </div>
           </div>
         </section>
 
@@ -1133,7 +1251,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn","metaSummaryTitle","metaSummaryAuthor","metaSummaryClub","metaSummaryPlace","metaSummaryDate","metaSummaryWeekday","metaSummaryTime"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -1841,7 +1959,24 @@
       renderStats();
       renderIssues();
       renderTable();
+      renderMetaSummary();
       updatePlayingRow();
+    }
+
+    function setMetaSummaryValue(el, value) {
+      if (!el) return;
+      el.textContent = value || "未填写";
+    }
+
+    function renderMetaSummary() {
+      const meta = currentMeta();
+      setMetaSummaryValue(els.metaSummaryTitle, meta.title);
+      setMetaSummaryValue(els.metaSummaryAuthor, meta.name);
+      setMetaSummaryValue(els.metaSummaryClub, meta.club);
+      setMetaSummaryValue(els.metaSummaryPlace, meta.place);
+      setMetaSummaryValue(els.metaSummaryDate, meta.date);
+      setMetaSummaryValue(els.metaSummaryWeekday, els.weekdayInput.value.trim());
+      setMetaSummaryValue(els.metaSummaryTime, els.timeInput.value.trim());
     }
 
     function updatePlayingRow() {
@@ -3586,6 +3721,14 @@
       $("openIssuesBtn").addEventListener("click", () => {
         window.open(GITHUB_ISSUES_URL, "_blank", "noopener");
         log("已打开 GitHub Issues 列表");
+      });
+      ["titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput"].forEach((id) => {
+        ["input", "change"].forEach((eventName) => {
+          els[id].addEventListener(eventName, () => {
+            renderMetaSummary();
+            broadcastStageState();
+          });
+        });
       });
       $("downloadHtmlBtn").addEventListener("click", () => {
         els.snapshotStage.classList.remove("has-image", "is-ready");
