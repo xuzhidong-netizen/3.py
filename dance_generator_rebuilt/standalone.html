@@ -510,6 +510,13 @@
       gap: 16px;
     }
 
+    .preview-side {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+      align-content: start;
+    }
+
     .snapshot-card {
       position: relative;
       overflow: hidden;
@@ -870,14 +877,6 @@
 
       <section class="card">
         <div class="section-head">
-          <h2>规则检查</h2>
-          <span class="badge" id="issueCount">0</span>
-        </div>
-        <div id="issues"></div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
           <h2>导出说明</h2>
         </div>
         <ul class="clean">
@@ -1000,12 +999,22 @@
           </div>
         </section>
 
-        <section class="card">
-          <div class="section-head">
-            <h2>日志</h2>
-          </div>
-          <div id="log"></div>
-        </section>
+        <div class="preview-side">
+          <section class="card">
+            <div class="section-head">
+              <h2>日志</h2>
+            </div>
+            <div id="log"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-head">
+              <h2>规则检查</h2>
+              <span class="badge" id="issueCount">0</span>
+            </div>
+            <div id="issues"></div>
+          </section>
+        </div>
       </section>
     </main>
   </div>
