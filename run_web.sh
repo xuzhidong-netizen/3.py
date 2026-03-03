@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$ROOT_DIR/.venv"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 ENV_FILE="$ROOT_DIR/.env.local"
+WEB_HOST="${DANCE_WEB_HOST:-0.0.0.0}"
+WEB_PORT="${DANCE_WEB_PORT:-8000}"
 
 cd "$ROOT_DIR"
 
@@ -30,7 +32,8 @@ python -m pip install --upgrade pip
 python -m pip install -r "$ROOT_DIR/dance_generator_rebuilt/requirements.txt"
 
 echo "启动舞曲生成器 Web..."
-echo "打开 http://127.0.0.1:8000"
+echo "本机访问 http://127.0.0.1:$WEB_PORT"
+echo "局域网访问 http://$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo '本机局域网IP'):$WEB_PORT"
 if [ -z "${DANCE_LIBRARY_GITHUB_TOKEN:-}" ]; then
   echo "警告：未配置 DANCE_LIBRARY_GITHUB_TOKEN，后端自动保存 GitHub 将不可用。"
   echo "可在 $ENV_FILE 中写入：export DANCE_LIBRARY_GITHUB_TOKEN=你的新Token"
