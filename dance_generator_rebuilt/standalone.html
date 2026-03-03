@@ -71,8 +71,7 @@
       gap: 12px;
     }
 
-    .fields label:first-child,
-    .fields label:last-child {
+    .fields label.full-span {
       grid-column: 1 / -1;
     }
 
@@ -452,8 +451,7 @@
         grid-template-columns: 1fr;
       }
 
-      .fields label:first-child,
-      .fields label:last-child {
+      .fields label.full-span {
         grid-column: auto;
       }
 
@@ -531,11 +529,11 @@
 
       <section class="card">
         <div class="fields">
-          <label>
+          <label class="full-span">
             <span>导入舞曲目录</span>
             <input id="fileInput" type="file" webkitdirectory multiple>
           </label>
-          <label>
+          <label class="full-span">
             <span>导入 ZIP 压缩包</span>
             <input id="archiveInput" type="file" accept=".zip,application/zip" multiple>
           </label>
