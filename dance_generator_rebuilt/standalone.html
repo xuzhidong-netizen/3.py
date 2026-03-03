@@ -989,11 +989,11 @@
               </label>
               <label>
                 <span>舞协</span>
-                <select id="clubInput"></select>
+                <input id="clubInput" list="clubOptions" value="华中大国际标准交谊舞俱乐部">
               </label>
               <label>
                 <span>地点</span>
-                <select id="placeInput"></select>
+                <input id="placeInput" list="placeOptions" value="老年活动中心">
               </label>
               <label>
                 <span>日期</span>
@@ -1009,6 +1009,8 @@
               </label>
             </div>
           </div>
+          <datalist id="clubOptions"></datalist>
+          <datalist id="placeOptions"></datalist>
           <div class="snapshot-shell" aria-hidden="true">
             <span id="snapshotCaption">未打开</span>
             <div class="snapshot-stage" id="snapshotStage">
@@ -1189,8 +1191,10 @@
     }
 
     function initDefaults() {
-      els.clubInput.innerHTML = CLUBS.map(v => `<option value="${v}">${v}</option>`).join("");
-      els.placeInput.innerHTML = PLACES.map(v => `<option value="${v}">${v}</option>`).join("");
+      $("clubOptions").innerHTML = CLUBS.map(v => `<option value="${v}"></option>`).join("");
+      $("placeOptions").innerHTML = PLACES.map(v => `<option value="${v}"></option>`).join("");
+      if (!els.clubInput.value.trim()) els.clubInput.value = CLUBS[0] || "";
+      if (!els.placeInput.value.trim()) els.placeInput.value = PLACES[0] || "";
       const now = new Date();
       const weekdays = ["周日","周一","周二","周三","周四","周五","周六"];
       els.dateInput.value = `${now.getFullYear()}年${String(now.getMonth()+1).padStart(2,"0")}月${String(now.getDate()).padStart(2,"0")}日`;
