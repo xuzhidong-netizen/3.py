@@ -4,6 +4,7 @@ import contextlib
 import http.server
 import socketserver
 import threading
+import shutil
 from pathlib import Path
 import json
 
@@ -79,6 +80,37 @@ def browser():
             yield browser
         finally:
             browser.close()
+
+
+@pytest.fixture(scope="module")
+def import_dirs(tmp_path_factory):
+    root = tmp_path_factory.mktemp("dance-imports")
+    small_dir = root / "small"
+    large_dir = root / "large"
+    small_dir.mkdir()
+    large_dir.mkdir()
+
+    sample_names = [
+        "001-慢四-测试舞曲1.mp3",
+        "002-吉特巴-测试舞曲2.mp3",
+        "003-并四-测试舞曲3.mp3",
+        "004-平四-测试舞曲4.mp3",
+        "005-慢三-测试舞曲5.mp3",
+        "006-伦巴-测试舞曲6.mp3",
+        "007-快三-测试舞曲7.mp3",
+        "008-兔子舞-测试舞曲8.mp3",
+    ]
+
+    for index in range(24):
+        (small_dir / sample_names[index % len(sample_names)].replace("测试舞曲", f"小批量舞曲{index + 1}-")).write_bytes(b"")
+
+    for index in range(160):
+        (large_dir / sample_names[index % len(sample_names)].replace("测试舞曲", f"大批量舞曲{index + 1}-")).write_bytes(b"")
+
+    try:
+        yield {"small": small_dir, "large": large_dir}
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
 
 
 def test_delete_all_clears_loaded_songs(browser, static_server):
@@ -195,6 +227,37 @@ def test_cloud_full_download_prefers_prebuilt_release_zip() -> None:
 
     assert 'const CLOUD_FULL_RELEASE_ZIP_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";' in html
     assert 'triggerDownload(CLOUD_FULL_RELEASE_ZIP_URL, CLOUD_FULL_ARCHIVE_NAME);' in html
+
+
+def test_directory_import_loads_local_folder(browser, static_server, import_dirs):
+    page = browser.new_page()
+    try:
+        page.goto(f"{static_server}/standalone.html")
+        page.locator("#fileInput").set_input_files(str(import_dirs["small"]))
+        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '24'")
+
+        assert page.locator("#songsBody .song-row").count() == 20
+        logs = page.locator("#log .log-entry")
+        assert any("已读取 24 首舞曲" in logs.nth(index).inner_text() for index in range(logs.count()))
+    finally:
+        page.close()
+
+
+def test_large_directory_import_finishes_with_progress_guards(browser, static_server, import_dirs):
+    page = browser.new_page()
+    try:
+        page.goto(f"{static_server}/standalone.html")
+        page.locator("#fileInput").set_input_files(str(import_dirs["large"]))
+        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '160'", timeout=60000)
+
+        assert page.locator("#songsBody .song-row").count() == 20
+        logs = page.locator("#log .log-entry")
+        texts = [logs.nth(index).inner_text() for index in range(logs.count())]
+        assert any("读取详情：目录音频 160 首" in text for text in texts)
+        assert any("已启用大批量快速模式" in text for text in texts)
+        assert any("读取舞曲进度 100% · 已完成，共 160 首；舞曲库同步将在后台继续" in text for text in texts)
+    finally:
+        page.close()
 
 
 def test_large_import_uses_fast_mode_guards() -> None:
