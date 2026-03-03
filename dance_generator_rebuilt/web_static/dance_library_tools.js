@@ -7,6 +7,8 @@
   const CACHE_KEY = "dance-library-cache-v1";
   const TOKEN_KEY = "dance-library-github-token-v1";
   const SYNC_CHANNEL = "dance-library-sync-v1";
+  const GITHUB_LOGIN_URL = "https://github.com/login";
+  const GITHUB_PAT_NEW_URL = "https://github.com/settings/personal-access-tokens/new";
   const GITHUB = {
     owner: "xuzhidong-netizen",
     repo: "3.py",
@@ -184,6 +186,23 @@
 
   function clearGitHubToken() {
     global.localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function openPopup(url, name) {
+    return global.open(
+      url,
+      name || "github-auth",
+      "popup=yes,width=980,height=760,menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes"
+    );
+  }
+
+  function openGitHubLoginWindow() {
+    const returnTo = encodeURIComponent(GITHUB_PAT_NEW_URL);
+    return openPopup(`${GITHUB_LOGIN_URL}?return_to=${returnTo}`, "github-login");
+  }
+
+  function openGitHubTokenWindow() {
+    return openPopup(GITHUB_PAT_NEW_URL, "github-token");
   }
 
   async function fetchJson(url) {
@@ -425,6 +444,8 @@
     normalizeDanceLabel,
     normalizeLibraryData,
     normalizeSearchText,
+    openGitHubLoginWindow,
+    openGitHubTokenWindow,
     parseSongFileName,
     queryLibrarySongs,
     readCachedLibraryData,

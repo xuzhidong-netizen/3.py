@@ -294,10 +294,11 @@
         </div>
         <div class="settings">
           <div class="field">
-            <span>GitHub Token（需要对 <code>xuzhidong-netizen/3.py</code> 具备 Contents 写权限，仅保存在当前浏览器）</span>
+            <span>GitHub Token（需要对 <code>xuzhidong-netizen/3.py</code> 具备 Contents 写权限，仅保存在当前浏览器。也可以先点“GitHub 登录”打开登录窗口。）</span>
             <input id="tokenInput" type="password" placeholder="首次使用时填写 GitHub Token">
           </div>
           <div class="settings-actions">
+            <button id="loginGitHubBtn" type="button">GitHub 登录</button>
             <button id="saveTokenBtn" type="button">保存令牌</button>
             <button id="clearTokenBtn" type="button">清除令牌</button>
             <span id="tokenState" class="token-state">尚未保存 GitHub Token</span>
@@ -352,6 +353,7 @@
       saveBtn: document.getElementById("saveBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
       tokenInput: document.getElementById("tokenInput"),
+      loginGitHubBtn: document.getElementById("loginGitHubBtn"),
       saveTokenBtn: document.getElementById("saveTokenBtn"),
       clearTokenBtn: document.getElementById("clearTokenBtn"),
       tokenState: document.getElementById("tokenState"),
@@ -521,7 +523,12 @@
         tools.setGitHubToken(typedToken);
       }
       if (!tools.getGitHubToken()) {
-        setStatus("请先填写并保存 GitHub Token。", "error");
+        const popup = tools.openGitHubLoginWindow();
+        if (!popup) {
+          setStatus("请先填写并保存 GitHub Token。浏览器拦截了 GitHub 登录窗口，请允许弹窗后重试。", "error");
+          return;
+        }
+        setStatus("请先填写并保存 GitHub Token。已为你打开 GitHub 登录窗口，登录后会跳到 Token 创建页。", "error");
         return;
       }
 
@@ -568,6 +575,15 @@
       els.tokenInput.value = "";
       updateTokenState();
       setStatus("GitHub Token 已保存到当前浏览器。", "success");
+    });
+
+    els.loginGitHubBtn.addEventListener("click", () => {
+      const popup = tools.openGitHubLoginWindow();
+      if (!popup) {
+        setStatus("浏览器拦截了 GitHub 登录窗口，请允许弹窗后重试。", "error");
+        return;
+      }
+      setStatus("已打开 GitHub 登录窗口，登录后会跳到 Token 创建页。", "success");
     });
 
     els.clearTokenBtn.addEventListener("click", () => {
