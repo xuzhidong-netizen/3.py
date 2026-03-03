@@ -1059,6 +1059,7 @@
     const COLLECTIVE = ["青春16步", "花火16步", "32步", "64步", "兔子舞", "集体恰恰", "阿拉伯之夜", "马卡琳娜", "玛卡琳娜", "蒙古舞"];
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
+    const DEFAULT_SONG_DURATION_SECONDS = 210;
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
@@ -1340,20 +1341,39 @@
       return null;
     }
 
-    async function audioDuration(file) {
+    function normalizeDurationSeconds(value, fallback = DEFAULT_SONG_DURATION_SECONDS) {
+      const normalized = Math.round(Number(value));
+      if (Number.isFinite(normalized) && normalized > 0) return normalized;
+      return fallback;
+    }
+
+    async function audioDuration(file, options = {}) {
+      const fallbackDuration = normalizeDurationSeconds(options.fallbackDuration, DEFAULT_SONG_DURATION_SECONDS);
+      const timeoutMs = Math.max(1000, Number(options.timeoutMs || 6000));
       return new Promise((resolve) => {
         const audio = document.createElement("audio");
         const url = URL.createObjectURL(file);
+        let settled = false;
+        const finalize = (value) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeoutId);
+          audio.pause();
+          audio.removeAttribute("src");
+          audio.load();
+          URL.revokeObjectURL(url);
+          resolve(normalizeDurationSeconds(value, fallbackDuration));
+        };
+        const timeoutId = window.setTimeout(() => {
+          finalize(fallbackDuration);
+        }, timeoutMs);
         audio.preload = "metadata";
         audio.src = url;
         audio.onloadedmetadata = () => {
-          const duration = Number.isFinite(audio.duration) ? Math.round(audio.duration) : 210;
-          URL.revokeObjectURL(url);
-          resolve(duration);
+          finalize(audio.duration);
         };
         audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          resolve(210);
+          finalize(fallbackDuration);
         };
       });
     }
@@ -1588,6 +1608,10 @@
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
+      const fallbackDuration = normalizeDurationSeconds(options.fallbackDuration, DEFAULT_SONG_DURATION_SECONDS);
+      const durationTimeoutMs = Math.max(1000, Number(options.durationTimeoutMs || 6000));
+      const skipDurationProbe = Boolean(options.skipDurationProbe);
+      const continueOnEntryError = Boolean(options.continueOnEntryError);
       const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, progress, options);
       progress?.update(62, "正在解析压缩包目录");
       const zip = await JSZip.loadAsync(archiveBuffer);
@@ -1607,6 +1631,8 @@
       const tracks = Array.isArray(playlist?.tracks) ? playlist.tracks : [];
       let currentPart = null;
       let currentPartTitle = null;
+      let estimatedDurationCount = 0;
+      let skippedCount = 0;
 
       for (let index = 0; index < entries.length; index += 1) {
         const entry = entries[index];
@@ -1616,29 +1642,59 @@
         const file = new File([blob], fileName, { type: blob.type || "audio/mpeg", lastModified: Date.now() });
         const track = tracks[index] || null;
         const partTitle = track?.part_title || "";
-        if (!currentPart || partTitle !== currentPartTitle) {
-          currentPartTitle = partTitle;
-          currentPart = { part_title: partTitle, music: [] };
-          state.parts.push(currentPart);
-        }
 
-        let song;
-        if (track && track.dance && track.title) {
-          song = buildCloudSong({
-            ...track,
-            source: track.source || file.name,
-          }, index);
-          song.file = file;
-          song.url = URL.createObjectURL(file);
-          song.duration = Number(track.duration || await audioDuration(file));
-          song.other = track.other || null;
-          song.choose = Boolean(track.choose);
-          song.speed = classifySpeed(song.dance);
-          song.dancetype = classifyDanceType(song.dance);
-        } else {
-          song = await parseSong(file, index);
+        try {
+          let song;
+          if (track && track.dance && track.title) {
+            song = buildCloudSong({
+              ...track,
+              source: track.source || file.name,
+            }, index);
+            song.file = file;
+            song.url = URL.createObjectURL(file);
+            if (Number(track.duration) > 0) {
+              song.duration = normalizeDurationSeconds(track.duration, fallbackDuration);
+            } else if (skipDurationProbe) {
+              song.duration = fallbackDuration;
+              estimatedDurationCount += 1;
+            } else {
+              song.duration = await audioDuration(file, {
+                fallbackDuration,
+                timeoutMs: durationTimeoutMs,
+              });
+            }
+            song.other = track.other || null;
+            song.choose = Boolean(track.choose);
+            song.speed = classifySpeed(song.dance);
+            song.dancetype = classifyDanceType(song.dance);
+          } else {
+            song = await parseSong(file, index, {
+              skipDurationProbe,
+              fallbackDuration,
+              durationTimeoutMs,
+            });
+            if (skipDurationProbe) {
+              estimatedDurationCount += 1;
+            }
+          }
+
+          if (!currentPart || partTitle !== currentPartTitle) {
+            currentPartTitle = partTitle;
+            currentPart = { part_title: partTitle, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(song);
+        } catch (error) {
+          if (!continueOnEntryError) {
+            throw error;
+          }
+          skippedCount += 1;
+          log(`${label}跳过 ${fileName}：${error.message || error}`);
         }
-        currentPart.music.push(song);
+      }
+
+      if (!allSongs().length) {
+        throw new Error(`${label}没有成功导入任何舞曲`);
       }
 
       applyPlaylistMeta(playlist);
@@ -1646,12 +1702,24 @@
       state.issues = [];
       progress?.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
       renderAll();
+      if (estimatedDurationCount) {
+        log(`${label}有 ${estimatedDurationCount} 首舞曲使用默认时长 ${secondsToClock(fallbackDuration)} 导入，未因时长读取失败中断`);
+      }
+      if (skippedCount) {
+        log(`${label}跳过 ${skippedCount} 首异常舞曲，已继续导入其余内容`);
+      }
       log(`已从压缩包导入${label} ${allSongs().length} 首`);
       await syncSongsToDanceLibrary(`导入${label}`);
     }
 
-    async function parseSong(file, index) {
-      const duration = await audioDuration(file);
+    async function parseSong(file, index, options = {}) {
+      const fallbackDuration = normalizeDurationSeconds(options.fallbackDuration, DEFAULT_SONG_DURATION_SECONDS);
+      const duration = options.skipDurationProbe
+        ? fallbackDuration
+        : await audioDuration(file, {
+            fallbackDuration,
+            timeoutMs: options.durationTimeoutMs,
+          });
       let name = file.name.replaceAll(" - ", "-").replaceAll("- ", "-").replaceAll(" -", "-").replaceAll("（", "(").replaceAll("）", ")").replaceAll("(1)", "").replaceAll("(2)", "");
       const stem = name.replace(/\.[^.]+$/, "");
       let num = index + 1;
@@ -3399,6 +3467,10 @@
               stallTimeoutMs: Math.max(1000, Number(config.stallTimeoutMs || 12000)),
               sourceLabel: "远端压缩包",
               cacheMode: config.cacheMode || "default",
+              skipDurationProbe: Boolean(config.skipDurationProbe),
+              continueOnEntryError: Boolean(config.continueOnEntryError),
+              fallbackDuration: config.fallbackDuration,
+              durationTimeoutMs: config.durationTimeoutMs,
             }
           );
           progress.done(`已导入 ${allSongs().length} 首`);
@@ -3534,10 +3606,14 @@
         archiveLabel: "示范舞曲包",
         successMessage: "已导入云端全部示范舞曲",
         syncReason: "导入云端全部示范舞曲",
-        retries: 3,
-        connectTimeoutMs: 15000,
-        stallTimeoutMs: 20000,
+        retries: 4,
+        connectTimeoutMs: 20000,
+        stallTimeoutMs: 30000,
         cacheMode: "default",
+        skipDurationProbe: true,
+        continueOnEntryError: true,
+        fallbackDuration: DEFAULT_SONG_DURATION_SECONDS,
+        durationTimeoutMs: 4000,
       });
     }
 

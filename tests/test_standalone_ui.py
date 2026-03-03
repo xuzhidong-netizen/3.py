@@ -50,6 +50,40 @@ def stub_cloud_top3(page) -> None:
     )
 
 
+def stub_cloud_full(page) -> None:
+    zip_bytes = TOP3_ZIP_PATH.read_bytes()
+    page.route(
+        "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_full.json",
+        lambda route: route.fulfill(
+            status=200,
+            headers={
+                "content-type": "application/json; charset=utf-8",
+                "access-control-allow-origin": "*",
+            },
+            body=json.dumps(
+                {
+                    "version": 1,
+                    "title": "全量歌单",
+                    "download_url": "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip",
+                    "tracks": [],
+                },
+                ensure_ascii=False,
+            ),
+        ),
+    )
+    page.route(
+        "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip",
+        lambda route: route.fulfill(
+            status=200,
+            headers={
+                "content-type": "application/zip",
+                "access-control-allow-origin": "*",
+            },
+            body=zip_bytes,
+        ),
+    )
+
+
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:  # noqa: A003
         return
@@ -169,6 +203,30 @@ def test_cloud_sample_load_retries_remote_archive(browser, static_server):
         assert attempts["zip"] == 2
         assert page.locator("#countStat").inner_text() == "3"
         assert page.locator("#log .log-entry").first.inner_text().startswith("已从压缩包导入前3首示范舞曲")
+    finally:
+        page.close()
+
+
+def test_cloud_full_load_uses_default_duration_when_metadata_probe_fails(browser, static_server):
+    page = browser.new_page()
+    try:
+        stub_cloud_full(page)
+        page.goto(f"{static_server}/standalone.html")
+        page.evaluate(
+            """
+            () => {
+              window.audioDuration = async () => {
+                throw new Error('metadata probe failed');
+              };
+            }
+            """
+        )
+        page.locator("#loadCloudFullBtn").click()
+        page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0")
+
+        assert page.locator("#countStat").inner_text() == "3"
+        log_entries = page.locator("#log .log-entry")
+        assert any("默认时长" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
     finally:
         page.close()
 
