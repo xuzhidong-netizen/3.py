@@ -3294,16 +3294,16 @@
       URL.revokeObjectURL(url);
     }
 
-    async function downloadSmallArchive(url, filename, label) {
+    async function downloadArchiveWithProgress(url, filename, label, options = {}) {
       const progress = createProgressLogger(`${label}进度`);
       progress.update(5, "正在准备下载");
       try {
         const archiveBuffer = await fetchArchiveBuffer(url, label, progress, {
-          retries: 2,
-          connectTimeoutMs: 15000,
-          stallTimeoutMs: 12000,
+          retries: Math.max(1, Number(options.retries || 2)),
+          connectTimeoutMs: Math.max(1000, Number(options.connectTimeoutMs || 15000)),
+          stallTimeoutMs: Math.max(1000, Number(options.stallTimeoutMs || 12000)),
           sourceLabel: "远端压缩包",
-          cacheMode: "default",
+          cacheMode: options.cacheMode || "default",
         });
         progress.update(94, "正在生成浏览器下载文件");
         const blob = new Blob([archiveBuffer], { type: "application/zip" });
@@ -3318,11 +3318,63 @@
       }
     }
 
-    function openDirectDownload(url, filename, label) {
-      const progress = createProgressLogger(`${label}进度`);
-      progress.update(20, "正在准备下载链接");
-      triggerDownload(url, filename);
-      progress.done("已交给浏览器下载");
+    async function loadCloudPlaylist(config) {
+      const progress = createProgressLogger(config.progressLabel);
+      log(config.startMessage);
+      try {
+        progress.update(8, "正在读取云端歌单");
+        const response = await fetch(config.playlistUrl, { cache: config.cacheMode || "default" });
+        if (!response.ok) {
+          throw new Error(config.playlistErrorMessage);
+        }
+        const playlist = await response.json();
+        progress.update(14, "云端歌单读取完成");
+        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, config.playlistUrl)) : [];
+        const playableTracks = tracks.filter(track => track.audio_url);
+        if (!playableTracks.length) {
+          await loadPlaylistArchive(
+            playlist,
+            resolveCloudAssetUrl(playlist.download_url, config.playlistUrl, config.archiveUrl),
+            config.archiveLabel,
+            progress,
+            {
+              retries: Math.max(1, Number(config.retries || 3)),
+              connectTimeoutMs: Math.max(1000, Number(config.connectTimeoutMs || 15000)),
+              stallTimeoutMs: Math.max(1000, Number(config.stallTimeoutMs || 12000)),
+              sourceLabel: "远端压缩包",
+              cacheMode: config.cacheMode || "default",
+            }
+          );
+          progress.done(`已导入 ${allSongs().length} 首`);
+          return;
+        }
+
+        cleanupSongUrls();
+        state.parts = [];
+        let currentPart = null;
+        let currentPartTitle = null;
+        playableTracks.forEach((track, index) => {
+          progress.update(30 + Math.round(((index + 1) / playableTracks.length) * 58), `正在导入舞曲 ${index + 1}/${playableTracks.length}`);
+          const partTitle = track.part_title || "";
+          if (!currentPart || partTitle !== currentPartTitle) {
+            currentPartTitle = partTitle;
+            currentPart = { part_title: partTitle, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(buildCloudSong(track, index));
+        });
+        applyPlaylistMeta(playlist);
+        renumber();
+        state.issues = [];
+        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
+        renderAll();
+        log(`${config.successMessage} ${allSongs().length} 首`);
+        await syncSongsToDanceLibrary(config.syncReason);
+        progress.done(`已导入 ${allSongs().length} 首`);
+      } catch (error) {
+        progress.fail(error.message || error);
+        throw error;
+      }
     }
 
     async function loadFiles() {
@@ -3400,121 +3452,37 @@
     }
 
     async function loadCloudSample() {
-      const progress = createProgressLogger("加载前3首示例进度");
-      log("正在加载云端前3首示例舞曲...");
-      try {
-        const playlistUrl = CLOUD_PLAYLIST_URL;
-        progress.update(8, "正在读取云端歌单");
-        const response = await fetch(playlistUrl, { cache: "default" });
-        if (!response.ok) {
-          throw new Error("云端歌单读取失败");
-        }
-        const playlist = await response.json();
-        progress.update(14, "云端歌单读取完成");
-        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
-        const playableTracks = tracks.filter(track => track.audio_url);
-        if (!playableTracks.length) {
-          await loadPlaylistArchive(
-            playlist,
-            resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_SAMPLE_URL),
-            "前3首示范舞曲",
-            progress,
-            {
-              retries: 3,
-              connectTimeoutMs: 15000,
-              stallTimeoutMs: 12000,
-              sourceLabel: "远端压缩包",
-              cacheMode: "default",
-            }
-          );
-          progress.done(`已导入 ${allSongs().length} 首`);
-          return;
-        }
-        cleanupSongUrls();
-        state.parts = [];
-        let currentPart = null;
-        let currentPartTitle = null;
-        playableTracks.forEach((track, index) => {
-          progress.update(30 + Math.round(((index + 1) / playableTracks.length) * 58), `正在导入舞曲 ${index + 1}/${playableTracks.length}`);
-          const partTitle = track.part_title || "";
-          if (!currentPart || partTitle !== currentPartTitle) {
-            currentPartTitle = partTitle;
-            currentPart = { part_title: partTitle, music: [] };
-            state.parts.push(currentPart);
-          }
-          currentPart.music.push(buildCloudSong(track, index));
-        });
-        applyPlaylistMeta(playlist);
-        renumber();
-        state.issues = [];
-        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
-        renderAll();
-        log(`已导入云端前3首示例舞曲 ${allSongs().length} 首`);
-        await syncSongsToDanceLibrary("导入云端前3首示例舞曲");
-        progress.done(`已导入 ${allSongs().length} 首`);
-      } catch (error) {
-        progress.fail(error.message || error);
-        throw error;
-      }
+      return loadCloudPlaylist({
+        progressLabel: "加载前3首示例进度",
+        startMessage: "正在加载云端前3首示例舞曲...",
+        playlistUrl: CLOUD_PLAYLIST_URL,
+        playlistErrorMessage: "云端歌单读取失败",
+        archiveUrl: CLOUD_SAMPLE_URL,
+        archiveLabel: "前3首示范舞曲",
+        successMessage: "已导入云端前3首示例舞曲",
+        syncReason: "导入云端前3首示例舞曲",
+        retries: 3,
+        connectTimeoutMs: 15000,
+        stallTimeoutMs: 12000,
+        cacheMode: "default",
+      });
     }
 
     async function loadCloudFullSample() {
-      const progress = createProgressLogger("加载全部示范舞曲进度");
-      log("正在加载云端全部示范舞曲...");
-      try {
-        const playlistUrl = CLOUD_FULL_PLAYLIST_URL;
-        progress.update(8, "正在读取云端歌单");
-        const response = await fetch(playlistUrl, { cache: "default" });
-        if (!response.ok) {
-          throw new Error("云端全部歌单读取失败");
-        }
-        const playlist = await response.json();
-        progress.update(14, "云端歌单读取完成");
-        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
-        const playableTracks = tracks.filter(track => track.audio_url);
-        if (!playableTracks.length) {
-          await loadPlaylistArchive(
-            playlist,
-            resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_FULL_URL),
-            "示范舞曲包",
-            progress,
-            {
-              retries: 2,
-              connectTimeoutMs: 20000,
-              stallTimeoutMs: 15000,
-              sourceLabel: "远端压缩包",
-              cacheMode: "default",
-            }
-          );
-          progress.done(`已导入 ${allSongs().length} 首`);
-          return;
-        }
-        cleanupSongUrls();
-        state.parts = [];
-        let currentPart = null;
-        let currentPartTitle = null;
-        playableTracks.forEach((track, index) => {
-          progress.update(30 + Math.round(((index + 1) / playableTracks.length) * 58), `正在导入舞曲 ${index + 1}/${playableTracks.length}`);
-          const partTitle = track.part_title || "";
-          if (!currentPart || partTitle !== currentPartTitle) {
-            currentPartTitle = partTitle;
-            currentPart = { part_title: partTitle, music: [] };
-            state.parts.push(currentPart);
-          }
-          currentPart.music.push(buildCloudSong(track, index));
-        });
-        applyPlaylistMeta(playlist);
-        renumber();
-        state.issues = [];
-        progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
-        renderAll();
-        log(`已导入云端全部示范舞曲 ${allSongs().length} 首`);
-        await syncSongsToDanceLibrary("导入云端全部示范舞曲");
-        progress.done(`已导入 ${allSongs().length} 首`);
-      } catch (error) {
-        progress.fail(error.message || error);
-        throw error;
-      }
+      return loadCloudPlaylist({
+        progressLabel: "加载全部示范舞曲进度",
+        startMessage: "正在加载云端全部示范舞曲...",
+        playlistUrl: CLOUD_FULL_PLAYLIST_URL,
+        playlistErrorMessage: "云端全部歌单读取失败",
+        archiveUrl: CLOUD_FULL_URL,
+        archiveLabel: "示范舞曲包",
+        successMessage: "已导入云端全部示范舞曲",
+        syncReason: "导入云端全部示范舞曲",
+        retries: 3,
+        connectTimeoutMs: 15000,
+        stallTimeoutMs: 20000,
+        cacheMode: "default",
+      });
     }
 
     function addPart() {
@@ -3566,14 +3534,24 @@
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
       }));
       $("downloadCloudBtn").addEventListener("click", () => {
-        downloadSmallArchive(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME, "下载前3首示例舞曲");
+        downloadArchiveWithProgress(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME, "下载前3首示例舞曲", {
+          retries: 2,
+          connectTimeoutMs: 15000,
+          stallTimeoutMs: 12000,
+          cacheMode: "default",
+        });
       });
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
         log(`${err.message}，已为你打开全部示范舞曲下载链接`);
         triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       }));
       $("downloadCloudFullBtn").addEventListener("click", () => {
-        openDirectDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲");
+        downloadArchiveWithProgress(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲", {
+          retries: 3,
+          connectTimeoutMs: 15000,
+          stallTimeoutMs: 20000,
+          cacheMode: "default",
+        });
       });
       $("libraryBtn").addEventListener("click", () => {
         try {
