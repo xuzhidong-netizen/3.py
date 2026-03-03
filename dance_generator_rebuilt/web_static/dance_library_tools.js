@@ -472,6 +472,23 @@
     return response?.status === 409 || /does not match/i.test(message);
   }
 
+  function explainGitHubTokenError(response, payload, fallbackMessage) {
+    const status = Number(response?.status || 0);
+    const message = String(payload?.message || "").trim();
+    if (/resource not accessible by personal access token/i.test(message)) {
+      return new Error(
+        `当前 GitHub Token 无法写入 ${GITHUB.owner}/${GITHUB.repo}。请确认该 Token 已选择仓库 ${GITHUB.owner}/${GITHUB.repo}，并开启 Contents: Read and write 权限。`
+      );
+    }
+    if (status === 401 || /bad credentials/i.test(message)) {
+      return new Error("当前 GitHub Token 无效、已过期，或已被撤销，请重新生成后再保存。");
+    }
+    if (/sso/i.test(message) || /single sign-on/i.test(message)) {
+      return new Error("当前 GitHub Token 还没有通过组织 SSO 授权，请先在 GitHub 完成授权后再保存。");
+    }
+    return new Error(message || fallbackMessage);
+  }
+
   function utf8ToBase64(value) {
     const bytes = new TextEncoder().encode(value);
     let binary = "";
@@ -523,7 +540,7 @@
         remoteData = parseGitHubLibraryContent(currentData);
       } else if (currentResponse.status !== 404) {
         const errorData = await safeJson(currentResponse);
-        throw new Error(errorData.message || "读取 GitHub 上的舞曲库失败。");
+        throw explainGitHubTokenError(currentResponse, errorData, "读取 GitHub 上的舞曲库失败。");
       }
 
       const normalized = attempt === 0 ? requestedData : combineLibraryData(remoteData, requestedData);
@@ -556,7 +573,7 @@
       if (attempt < SAVE_RETRY_LIMIT && isShaMismatch(saveResponse, saveData)) {
         continue;
       }
-      throw new Error(saveData.message || "保存到 GitHub 失败。");
+      throw explainGitHubTokenError(saveResponse, saveData, "保存到 GitHub 失败。");
     }
 
     throw new Error("保存到 GitHub 失败，请稍后重试。");

@@ -233,3 +233,52 @@ test("probeBackendAvailability reports failure when static page has no backend",
   assert.equal(result.ok, false);
   assert.equal(result.status, 404);
 });
+
+test("saveLibraryData surfaces friendly message for token permission errors", async () => {
+  const storage = new Map();
+  const tools = loadTools({
+    localStorage: {
+      getItem(key) {
+        return storage.has(key) ? storage.get(key) : null;
+      },
+      setItem(key, value) {
+        storage.set(key, String(value));
+      },
+      removeItem(key) {
+        storage.delete(key);
+      },
+    },
+    fetch: async (url, options = {}) => {
+      if (!options.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            sha: "sha-1",
+            content: Buffer.from(JSON.stringify({
+              version: 1,
+              updated_at: "2026-03-03T10:00:00Z",
+              songs: [],
+            })).toString("base64"),
+          }),
+        };
+      }
+      return {
+        ok: false,
+        status: 403,
+        json: async () => ({
+          message: "Resource not accessible by personal access token",
+        }),
+      };
+    },
+  });
+  tools.setGitHubToken("github_pat_test");
+
+  await assert.rejects(
+    () => tools.saveLibraryData({
+      version: 1,
+      updated_at: "2026-03-03T10:00:00Z",
+      songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
+    }),
+    /Contents: Read and write 权限/,
+  );
+});
