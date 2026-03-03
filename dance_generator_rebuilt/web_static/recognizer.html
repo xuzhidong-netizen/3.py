@@ -12,6 +12,7 @@
       --ink: #2f1f15;
       --muted: #725848;
       --accent: #cf6e33;
+      --focus: rgba(207, 110, 51, 0.22);
       --shadow: 0 24px 60px rgba(97, 56, 28, 0.12);
       --success: #2d7f59;
       --error: #b34d36;
@@ -25,13 +26,43 @@
       background:
         radial-gradient(circle at top left, rgba(255, 191, 149, 0.48), transparent 24%),
         linear-gradient(180deg, #fffdf9 0%, #fff1e3 100%);
+      background-attachment: fixed;
     }
+    a { color: inherit; }
     .shell {
       max-width: 1220px;
       margin: 0 auto;
       padding: 28px 20px 56px;
       display: grid;
       gap: 18px;
+    }
+    .page-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      text-decoration: none;
+      font-weight: 700;
+      box-shadow: 0 12px 24px rgba(97, 56, 28, 0.08);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+    .nav-pill.is-active {
+      background: linear-gradient(135deg, #2d8f83, #88d9bf);
+      color: #08322d;
+      border-color: transparent;
+    }
+    .nav-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(97, 56, 28, 0.12);
     }
     .hero,
     .card,
@@ -46,6 +77,16 @@
       padding: 28px;
       display: grid;
       gap: 18px;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .hero-copy {
+      max-width: 760px;
     }
     .eyebrow {
       margin: 0 0 10px;
@@ -69,8 +110,8 @@
       line-height: 1.7;
     }
     .actions {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
     .hero-actions {
@@ -89,8 +130,13 @@
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
+      min-height: 48px;
+      justify-content: center;
     }
     .actions label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: linear-gradient(135deg, #cf6e33, #e5a57c);
       color: white;
     }
@@ -126,6 +172,9 @@
     .status {
       padding: 14px 18px;
       color: var(--muted);
+      position: sticky;
+      top: 12px;
+      z-index: 5;
     }
     .status[data-tone="success"] {
       color: var(--success);
@@ -163,10 +212,24 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 18px;
+      min-height: 52px;
       padding: 14px 16px;
       font: inherit;
       background: rgba(255, 255, 255, 0.9);
       color: var(--ink);
+    }
+    .actions button:hover,
+    .hero-actions a:hover {
+      transform: translateY(-1px);
+    }
+    .actions button:focus-visible,
+    .actions label:focus-within,
+    .search-box:focus-visible,
+    .hero-actions a:focus-visible,
+    .nav-pill:focus-visible {
+      outline: none;
+      border-color: rgba(207, 110, 51, 0.35);
+      box-shadow: 0 0 0 4px var(--focus);
     }
     .search-result-grid {
       display: grid;
@@ -275,8 +338,13 @@
       font-size: 13px;
     }
     @media (max-width: 960px) {
+      .page-nav {
+        display: grid;
+      }
+      .page-nav,
       .grid,
-      .stats {
+      .stats,
+      .actions {
         grid-template-columns: 1fr;
       }
     }
@@ -284,14 +352,22 @@
 </head>
 <body>
   <main class="shell">
+    <nav class="page-nav" aria-label="页面导航">
+      <a class="nav-pill" href="../standalone.html">主页面</a>
+      <a class="nav-pill" href="./library.html">舞曲库</a>
+      <a class="nav-pill is-active" href="./recognizer.html">舞曲识别</a>
+      <a class="nav-pill" href="./index.html">Web 控制台</a>
+    </nav>
     <section class="hero">
-      <div>
-        <p class="eyebrow">Dance Recognition</p>
-        <h1>舞曲识别</h1>
-        <p>识别顺序是“文件名规则优先，舞曲库回查兜底”。如果文件名没有直接写出舞种，页面会用提取到的舞曲名去查询舞曲库，并返回对应舞种。</p>
-      </div>
-      <div class="hero-actions">
-        <a href="../standalone.html">返回主页面</a>
+      <div class="hero-top">
+        <div class="hero-copy">
+          <p class="eyebrow">Dance Recognition</p>
+          <h1>舞曲识别</h1>
+          <p>识别顺序是“文件名规则优先，舞曲库回查兜底”。如果文件名没有直接写出舞种，页面会用提取到的舞曲名去查询舞曲库，并返回对应舞种。</p>
+        </div>
+        <div class="hero-actions">
+          <a href="../standalone.html">返回主页面</a>
+        </div>
       </div>
       <div class="actions">
         <label for="recognizerInput">上传文件

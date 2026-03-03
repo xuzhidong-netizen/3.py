@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
-from pymediainfo import MediaInfo
+try:
+    from pymediainfo import MediaInfo
+except ImportError:  # pragma: no cover - exercised through fallback path
+    MediaInfo = None
 
 from dance_generator_rebuilt.domain.models import (
     ALL_KNOWN_DANCES,
@@ -23,6 +27,14 @@ from dance_generator_rebuilt.services.utils import file_md5
 AUDIO_EXTENSIONS = {".mp3", ".wma", ".ogg", ".m4a", ".flac"}
 
 
+def fallback_media_info(file_path: Path) -> dict:
+    return {
+        "file_name": file_path.name,
+        "folder_name": str(file_path.parent),
+        "duration": 210,
+    }
+
+
 def normalize_dance_label(label: str) -> str:
     if label == "十八摸":
         return "玛卡琳娜"
@@ -35,6 +47,10 @@ def normalize_dance_label(label: str) -> str:
     if "16步" in label and "青春16步" not in label and "花火16步" not in label:
         return label.replace("16步", "花火16步")
     return label
+
+
+def clean_song_title(title: str) -> str:
+    return re.sub(r"[-_\s]*点播$", "", str(title or "").strip())
 
 
 def classify_dance_type(dance: str) -> str | None:
@@ -71,14 +87,20 @@ def build_distribution(dances: list[str]) -> Distribution:
 
 
 def parse_media_info(file_path: Path) -> dict:
-    media_info = MediaInfo.parse(str(file_path))
-    tracks = json.loads(media_info.to_json())["tracks"]
-    general = tracks[0]
-    return {
-        "file_name": general.get("file_name_extension", file_path.name),
-        "folder_name": general.get("folder_name", ""),
-        "duration": int(general.get("duration", 210_000)) // 1000,
-    }
+    if MediaInfo is None:
+        return fallback_media_info(file_path)
+    try:
+        media_info = MediaInfo.parse(str(file_path))
+        tracks = json.loads(media_info.to_json()).get("tracks") or []
+        general = tracks[0] if tracks else {}
+        duration_ms = general.get("duration", 210_000)
+        return {
+            "file_name": general.get("file_name_extension", file_path.name),
+            "folder_name": general.get("folder_name", str(file_path.parent)),
+            "duration": int(float(duration_ms)) // 1000,
+        }
+    except Exception:
+        return fallback_media_info(file_path)
 
 
 def parse_song(file_path: Path) -> Song:
@@ -113,6 +135,7 @@ def parse_song(file_path: Path) -> Song:
                 title = remainder[:third_index]
                 other = remainder[third_index + 1 :]
 
+    title = clean_song_title(title)
     choose = "点播" in filename or (other is not None and "点播" in other)
     return Song(
         num=num,

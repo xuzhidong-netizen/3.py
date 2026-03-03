@@ -8,11 +8,13 @@
     :root {
       --bg: #f4efe6;
       --paper: rgba(255, 250, 242, 0.92);
+      --paper-strong: rgba(255, 252, 247, 0.98);
       --ink: #1d231f;
       --muted: #61706a;
       --line: rgba(29, 35, 31, 0.12);
       --accent: #b3482d;
       --accent-dark: #7d2d18;
+      --focus: rgba(179, 72, 45, 0.24);
       --warn: #d8a320;
       --error: #b23a33;
       --mint: #dfe9df;
@@ -29,7 +31,10 @@
         radial-gradient(circle at top left, rgba(179, 72, 45, 0.14), transparent 28%),
         radial-gradient(circle at right 20%, rgba(102, 126, 84, 0.14), transparent 20%),
         linear-gradient(180deg, #efe5d7 0%, var(--bg) 40%, #f8f5ef 100%);
+      background-attachment: fixed;
     }
+
+    a { color: inherit; }
 
     .page {
       display: grid;
@@ -45,10 +50,10 @@
     }
 
     .card {
-      padding: 18px;
-      border-radius: 22px;
+      padding: 20px;
+      border-radius: 24px;
       background: var(--paper);
-      border: 1px solid rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.68);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
     }
@@ -84,15 +89,24 @@
 
     input, select, textarea {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 12px;
+      min-height: 52px;
+      padding: 14px 16px;
+      border-radius: 16px;
       border: 1px solid var(--line);
       background: rgba(255,255,255,0.88);
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 148px;
       resize: vertical;
+    }
+
+    input[type="file"] {
+      min-height: 0;
+      padding: 10px 0 0;
+      border: 0;
+      background: transparent;
     }
 
     .buttons {
@@ -129,12 +143,156 @@
       border-radius: 999px;
       background: #1d231f;
       color: white;
-      padding: 10px 16px;
+      min-height: 48px;
+      padding: 12px 18px;
       cursor: pointer;
+      box-shadow: 0 12px 24px rgba(29, 35, 31, 0.12);
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
     }
 
     button.primary {
       background: linear-gradient(135deg, var(--accent), #df7d46);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(29, 35, 31, 0.16);
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    .quick-link:focus-visible {
+      outline: none;
+      border-color: rgba(179, 72, 45, 0.35);
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    .hero-card {
+      background:
+        radial-gradient(circle at top right, rgba(255, 202, 170, 0.62), transparent 26%),
+        linear-gradient(135deg, var(--paper-strong), rgba(247, 238, 226, 0.96));
+    }
+
+    .hero-split {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .quick-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.78);
+      box-shadow: 0 12px 24px rgba(29, 35, 31, 0.08);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .quick-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(29, 35, 31, 0.12);
+    }
+
+    .quick-link.is-library {
+      background: linear-gradient(135deg, rgba(225, 106, 45, 0.18), rgba(243, 186, 79, 0.26));
+      color: #5e2a12;
+    }
+
+    .quick-link.is-recognizer {
+      background: linear-gradient(135deg, rgba(45, 143, 131, 0.18), rgba(136, 217, 191, 0.28));
+      color: #0b4038;
+    }
+
+    .quick-link.is-web {
+      background: linear-gradient(135deg, rgba(29, 35, 31, 0.08), rgba(97, 112, 106, 0.18));
+    }
+
+    .import-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .import-drop {
+      display: grid;
+      gap: 8px;
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(179, 72, 45, 0.12);
+      background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(245, 235, 224, 0.72));
+    }
+
+    .import-drop strong {
+      font-size: 17px;
+    }
+
+    .import-drop span {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .control-sections {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(29, 35, 31, 0.08);
+      background: rgba(255,255,255,0.46);
+    }
+
+    .group-label {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-dark);
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-buttons button {
+      flex: 1 1 180px;
+    }
+
+    .import-note {
+      margin-top: 14px;
+      line-height: 1.7;
     }
 
     #libraryBtn {
@@ -222,6 +380,9 @@
       justify-content: space-between;
       gap: 16px;
       align-items: center;
+      background:
+        radial-gradient(circle at right top, rgba(255, 205, 173, 0.42), transparent 28%),
+        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245, 236, 226, 0.88));
     }
 
     .hero-right {
@@ -459,6 +620,15 @@
       word-break: break-all;
     }
 
+    #issues,
+    #log {
+      display: grid;
+      gap: 10px;
+      max-height: 270px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
     @keyframes snapshotSweep {
       from { transform: translateX(-140%); }
       to { transform: translateX(140%); }
@@ -485,6 +655,7 @@
       .page { grid-template-columns: 1fr; }
       .preview-grid { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
+      .import-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 900px) {
@@ -508,6 +679,10 @@
       .buttons button {
         flex: 1 1 calc(50% - 10px);
         min-width: 140px;
+      }
+
+      .control-buttons button {
+        flex-basis: calc(50% - 10px);
       }
 
       .section-head {
@@ -543,7 +718,8 @@
       }
 
       .buttons button,
-      .hero-right button {
+      .hero-right button,
+      .control-buttons button {
         width: 100%;
         min-width: 0;
       }
@@ -552,6 +728,10 @@
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
+      }
+
+      .quick-links {
+        flex-direction: column;
       }
 
       .stats {
@@ -571,22 +751,39 @@
 <body>
   <div class="page">
     <aside class="panel">
-      <section class="card">
-        <p class="eyebrow">Standalone HTML</p>
-        <h1>舞曲生成器</h1>
-        <p class="subtle">双击打开即可使用，不需要起本地服务。</p>
+      <section class="card hero-card">
+        <div class="hero-split">
+          <div>
+            <p class="eyebrow">Standalone HTML</p>
+            <h1>舞曲生成器</h1>
+            <p class="subtle">双击打开即可使用，不需要起本地服务。界面会优先服务“读取、排曲、识别、导出”这四类高频操作。</p>
+          </div>
+          <div class="hero-meta">
+            <span class="badge">浏览器版</span>
+            <span class="badge">本地文件不上传</span>
+          </div>
+        </div>
+        <div class="quick-links">
+          <a class="quick-link is-web" href="./web_static/index.html">打开 Web 控制台</a>
+          <a class="quick-link is-library" href="./web_static/library.html" target="_blank" rel="noopener">打开舞曲库页</a>
+          <a class="quick-link is-recognizer" href="./web_static/recognizer.html" target="_blank" rel="noopener">打开舞曲识别页</a>
+        </div>
       </section>
 
       <section class="card">
-        <div class="fields">
-          <label class="full-span">
-            <span>导入舞曲目录</span>
+        <div class="import-grid">
+          <label class="import-drop">
+            <strong>导入舞曲目录</strong>
+            <span>直接选择本地文件夹，保留目录结构并自动按目录归类分场。</span>
             <input id="fileInput" type="file" webkitdirectory multiple>
           </label>
-          <label class="full-span">
-            <span>导入 ZIP 压缩包</span>
+          <label class="import-drop">
+            <strong>导入 ZIP 压缩包</strong>
+            <span>在浏览器内解压后导入，只提取可用音频文件，不保留原始压缩包。</span>
             <input id="archiveInput" type="file" accept=".zip,application/zip" multiple>
           </label>
+        </div>
+        <div class="fields">
           <label>
             <span>标题</span>
             <input id="titleInput" value="青春舞会舞曲">
@@ -616,22 +813,35 @@
             <input id="timeInput" value="19:00">
           </label>
         </div>
-        <div class="buttons">
-          <button class="primary" id="loadBtn">读取文件</button>
-          <button id="loadCloudBtn">加载/下载前3首示例</button>
-          <button id="loadCloudFullBtn">加载/下载全部示范舞曲</button>
-          <button id="libraryBtn">舞曲库</button>
-          <button id="recognizerBtn">舞曲识别</button>
-          <button id="checkBtn">检查排曲</button>
-          <button id="addPartBtn">增加分场</button>
-          <button id="addSongBtn">增加舞曲</button>
+        <div class="control-sections">
+          <div class="control-group">
+            <p class="group-label">导入与校验</p>
+            <div class="control-buttons">
+              <button class="primary" id="loadBtn">读取舞曲</button>
+              <button id="loadCloudBtn">加载/下载前3首示例</button>
+              <button id="loadCloudFullBtn">加载/下载全部示范舞曲</button>
+              <button id="checkBtn">检查排曲</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">舞曲库与编辑</p>
+            <div class="control-buttons">
+              <button id="libraryBtn">舞曲库</button>
+              <button id="recognizerBtn">舞曲识别</button>
+              <button id="addPartBtn">增加分场</button>
+              <button id="addSongBtn">增加舞曲</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <p class="group-label">导出与展示</p>
+            <div class="control-buttons">
+              <button id="downloadTxtBtn">导出 TXT</button>
+              <button id="downloadHtmlBtn">打开大屏页面</button>
+              <button id="snapshotBtn">打开快照大屏</button>
+            </div>
+          </div>
         </div>
-        <div class="buttons">
-          <button id="downloadTxtBtn">导出 TXT</button>
-          <button id="downloadHtmlBtn">打开大屏页面</button>
-          <button id="snapshotBtn">打开快照大屏</button>
-        </div>
-        <p class="hint">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；不会上传本地音频文件。</p>
+        <p class="hint import-note">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；读取文件后会自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传本地音频文件。</p>
       </section>
 
       <section class="card">
@@ -756,6 +966,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="./web_static/dance_library_tools.js"></script>
   <script>
     const CLUBS = [
       "华中大国际标准交谊舞俱乐部",
@@ -778,6 +989,7 @@
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
     const GITHUB_ISSUES_URL = "https://github.com/xuzhidong-netizen/3.py/issues";
     const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`;
+    const libraryTools = window.DanceLibraryTools || null;
 
     const state = {
       parts: [{ part_title: "", music: [] }],
@@ -874,6 +1086,59 @@
         throw new Error("浏览器阻止了 GitHub Issue 弹窗，请允许弹窗后重试。");
       }
       log("已打开 GitHub 新建 Issue 页面");
+    }
+
+    function buildLibraryEntriesFromSongs(songs) {
+      return songs
+        .map((song) => ({
+          title: String(song?.title || "").trim(),
+          dance: normalizeDanceLabel(String(song?.dance || "").trim()),
+        }))
+        .filter((song) => song.title && song.dance);
+    }
+
+    async function syncSongsToDanceLibrary(reason) {
+      if (!libraryTools) {
+        log("当前页面未加载舞曲库同步模块，已跳过自动同步");
+        return;
+      }
+
+      const additions = buildLibraryEntriesFromSongs(allSongs());
+      if (!additions.length) {
+        log(`${reason}完成，但没有提取到可写入舞曲库的舞种和舞曲名`);
+        return;
+      }
+
+      let baseData = libraryTools.readCachedLibraryData();
+      try {
+        const loaded = await libraryTools.loadLibraryData();
+        baseData = libraryTools.combineLibraryData(baseData, loaded.data);
+      } catch (error) {
+        log(`舞曲库远端数据读取失败，已改用本地缓存继续同步：${error.message || error}`);
+      }
+
+      const merged = libraryTools.mergeLibraryEntries(baseData, additions);
+      libraryTools.cacheLibraryData(merged.data);
+      libraryTools.broadcastLibraryUpdate(merged.data);
+
+      const details = [];
+      if (merged.added) details.push(`新增 ${merged.added} 条`);
+      if (merged.updated) details.push(`覆盖 ${merged.updated} 条`);
+      if (merged.skipped) details.push(`跳过 ${merged.skipped} 条`);
+      log(`${reason}后已自动更新舞曲库：${details.join("，") || "无变化"}`);
+
+      const token = libraryTools.getGitHubToken();
+      if (!token) {
+        log("当前浏览器未保存 GitHub Token，舞曲库已先更新到本地缓存");
+        return;
+      }
+
+      try {
+        await libraryTools.saveLibraryDataToGitHub(merged.data);
+        log("舞曲库已自动同步到 GitHub");
+      } catch (error) {
+        log(`舞曲库自动同步到 GitHub 失败：${error.message || error}`);
+      }
     }
 
     function secondsToClock(total) {
@@ -1091,6 +1356,7 @@
       state.issues = [];
       renderAll();
       log(`已从压缩包导入${label} ${allSongs().length} 首`);
+      await syncSongsToDanceLibrary(`导入${label}`);
     }
 
     async function parseSong(file, index) {
@@ -2462,6 +2728,7 @@
       state.issues = [];
       renderAll();
       log(`已读取 ${allSongs().length} 首舞曲`);
+      await syncSongsToDanceLibrary("读取文件");
     }
 
     async function loadCloudSample() {
@@ -2495,6 +2762,7 @@
       state.issues = [];
       renderAll();
       log(`已导入云端前3首示例舞曲 ${allSongs().length} 首`);
+      await syncSongsToDanceLibrary("导入云端前3首示例舞曲");
     }
 
     async function loadCloudFullSample() {
@@ -2528,6 +2796,7 @@
       state.issues = [];
       renderAll();
       log(`已导入云端全部示范舞曲 ${allSongs().length} 首`);
+      await syncSongsToDanceLibrary("导入云端全部示范舞曲");
     }
 
     function addPart() {
@@ -2550,6 +2819,7 @@
         renumber();
         renderAll();
         log("已增加舞曲");
+        await syncSongsToDanceLibrary("增加舞曲");
       };
       picker.click();
     }

@@ -3,9 +3,14 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 
-from mutagen import File
-from mutagen.flac import FLAC
-from mutagen.id3 import ID3, TALB, TCON, TDRC, TIT2, TPE1
+try:
+    from mutagen import File
+    from mutagen.flac import FLAC
+    from mutagen.id3 import ID3, TALB, TCON, TDRC, TIT2, TPE1
+except ImportError:  # pragma: no cover - exercised through fallback path
+    File = None
+    FLAC = None
+    ID3 = TALB = TCON = TDRC = TIT2 = TPE1 = None
 
 
 DEFAULT_ALBUM = "华中科技大学国标舞俱乐部曲库"
@@ -13,12 +18,17 @@ DEFAULT_ARTIST = "HBDC"
 
 
 def read_tag(file_path: str | Path) -> dict:
+    if File is None:
+        return {"title": None, "artist": None, "year": None, "genre": None, "album": None}
     path = Path(file_path)
     audio = File(path)
     if audio is None:
         return {"title": None, "artist": None, "year": None, "genre": None, "album": None}
     if path.suffix.lower() == ".mp3":
-        tag = ID3(str(path))
+        try:
+            tag = ID3(str(path))
+        except Exception:
+            return {"title": None, "artist": None, "year": None, "genre": None, "album": None}
         return {
             "title": tag["TIT2"].text[0] if "TIT2" in tag else None,
             "artist": tag["TPE1"].text[0] if "TPE1" in tag else None,
@@ -36,10 +46,15 @@ def read_tag(file_path: str | Path) -> dict:
 
 
 def write_tag(file_path: str | Path, title: str, genre: str) -> None:
+    if File is None:
+        return
     path = Path(file_path)
     year = str(datetime.date.today().year)
     if path.suffix.lower() == ".mp3":
-        tag = ID3(str(path))
+        try:
+            tag = ID3(str(path))
+        except Exception:
+            return
         tag["TIT2"] = TIT2(encoding=3, text=title)
         tag["TPE1"] = TPE1(encoding=3, text=DEFAULT_ARTIST)
         tag["TALB"] = TALB(encoding=3, text=DEFAULT_ALBUM)
@@ -51,7 +66,7 @@ def write_tag(file_path: str | Path, title: str, genre: str) -> None:
     audio = File(path)
     if audio is None:
         return
-    if isinstance(audio, FLAC):
+    if FLAC is not None and isinstance(audio, FLAC):
         audio["year"] = year
     else:
         audio["date"] = year

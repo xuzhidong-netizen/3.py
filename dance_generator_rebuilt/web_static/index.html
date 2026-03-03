@@ -12,8 +12,13 @@
       <div class="panel-head">
         <p class="eyebrow">Dance List Console</p>
         <h1>舞曲生成器</h1>
-        <p class="subtle">从本地目录扫描舞曲，编排、检查、导出、保存。</p>
+        <p class="subtle">从本地目录扫描舞曲，编排、检查、导出、保存。页面布局已按“导入、排曲、导出”重排，常用入口集中在顶部。</p>
         <p><a class="home-link" href="../standalone.html">返回主页面</a></p>
+        <nav class="quick-links" aria-label="页面导航">
+          <a class="quick-link" href="../standalone.html">Standalone</a>
+          <a class="quick-link" href="./library.html">舞曲库</a>
+          <a class="quick-link" href="./recognizer.html">舞曲识别</a>
+        </nav>
       </div>
 
       <section class="card meta-card">
@@ -51,22 +56,28 @@
             <input id="timeInput" type="text" placeholder="19:00">
           </label>
         </div>
-        <div class="button-row">
-          <button class="primary" id="loadBtn">加载目录</button>
-          <button id="loadCloudBtn">加载/下载前3首示例</button>
-          <button id="loadCloudFullBtn">加载/下载全部示范舞曲</button>
-          <button id="syncBtn">更新列表</button>
-          <button id="checkBtn">检查排曲</button>
-        </div>
-        <div class="button-row">
-          <button id="addPartBtn">增加分场</button>
-          <button id="deletePartBtn">删除最后分场</button>
-          <button id="addSongBtn">增加舞曲</button>
-          <button id="exportBtn">生成列表</button>
-        </div>
-        <div class="button-row">
-          <button id="saveCopyBtn">复制保存</button>
-          <button id="saveMoveBtn">移动保存</button>
+        <div class="action-sections">
+          <section class="action-group">
+            <h3>导入与检查</h3>
+            <div class="button-row">
+              <button class="primary" id="loadBtn">加载目录</button>
+              <button id="loadCloudBtn">加载/下载前3首示例</button>
+              <button id="loadCloudFullBtn">加载/下载全部示范舞曲</button>
+              <button id="syncBtn">更新列表</button>
+              <button id="checkBtn">检查排曲</button>
+            </div>
+          </section>
+          <section class="action-group">
+            <h3>排曲与导出</h3>
+            <div class="button-row">
+              <button id="addPartBtn">增加分场</button>
+              <button id="deletePartBtn">删除最后分场</button>
+              <button id="addSongBtn">增加舞曲</button>
+              <button id="exportBtn">生成列表</button>
+              <button id="saveCopyBtn">复制保存</button>
+              <button id="saveMoveBtn">移动保存</button>
+            </div>
+          </section>
         </div>
       </section>
 

@@ -12,6 +12,7 @@
       --ink: #2f1f15;
       --muted: #725848;
       --accent: #cf6e33;
+      --focus: rgba(207, 110, 51, 0.22);
       --shadow: 0 24px 60px rgba(97, 56, 28, 0.12);
       --success: #2d7f59;
       --error: #b34d36;
@@ -26,13 +27,43 @@
         radial-gradient(circle at top left, rgba(255, 191, 149, 0.48), transparent 26%),
         radial-gradient(circle at 85% 15%, rgba(255, 230, 207, 0.88), transparent 20%),
         linear-gradient(180deg, #fffdf9 0%, #fff2e5 100%);
+      background-attachment: fixed;
     }
+    a { color: inherit; }
     .shell {
       max-width: 1220px;
       margin: 0 auto;
       padding: 28px 20px 56px;
       display: grid;
       gap: 18px;
+    }
+    .page-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      text-decoration: none;
+      font-weight: 700;
+      box-shadow: 0 12px 24px rgba(97, 56, 28, 0.08);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+    .nav-pill.is-active {
+      background: linear-gradient(135deg, #cf6e33, #e5a57c);
+      color: white;
+      border-color: transparent;
+    }
+    .nav-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(97, 56, 28, 0.12);
     }
     .hero,
     .card,
@@ -58,6 +89,16 @@
       transform: translateX(-140%);
       animation: sweep 7s linear infinite;
       pointer-events: none;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .hero-copy {
+      max-width: 760px;
     }
     .eyebrow {
       margin: 0 0 10px;
@@ -111,6 +152,9 @@
     .status {
       padding: 14px 18px;
       color: var(--muted);
+      position: sticky;
+      top: 12px;
+      z-index: 5;
     }
     .status[data-tone="success"] {
       color: var(--success);
@@ -141,8 +185,8 @@
       line-height: 1.7;
     }
     .actions {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
     .actions label,
@@ -156,8 +200,13 @@
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
+      min-height: 48px;
+      justify-content: center;
     }
     .actions label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: linear-gradient(135deg, #cf6e33, #e5a57c);
       color: white;
     }
@@ -185,6 +234,7 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 18px;
+      min-height: 52px;
       padding: 14px 16px;
       font: inherit;
       background: rgba(255, 255, 255, 0.9);
@@ -204,6 +254,7 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 18px;
+      min-height: 52px;
       padding: 14px 16px;
       font: inherit;
       background: rgba(255, 255, 255, 0.9);
@@ -235,10 +286,28 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 16px;
+      min-height: 52px;
       padding: 12px 14px;
       font: inherit;
       background: rgba(255, 255, 255, 0.92);
       color: var(--ink);
+    }
+    .actions button:hover,
+    .settings button:hover,
+    .hero-actions a:hover {
+      transform: translateY(-1px);
+    }
+    .actions button:focus-visible,
+    .actions label:focus-within,
+    .settings button:focus-visible,
+    .field input:focus-visible,
+    .search-box:focus-visible,
+    .library-filters select:focus-visible,
+    .hero-actions a:focus-visible,
+    .nav-pill:focus-visible {
+      outline: none;
+      border-color: rgba(207, 110, 51, 0.35);
+      box-shadow: 0 0 0 4px var(--focus);
     }
     .category-tabs,
     .pagination {
@@ -319,8 +388,13 @@
       to { transform: translateX(160%); }
     }
     @media (max-width: 960px) {
+      .page-nav {
+        display: grid;
+      }
+      .page-nav,
       .hero-stats,
-      .grid {
+      .grid,
+      .actions {
         grid-template-columns: 1fr;
       }
     }
@@ -328,14 +402,22 @@
 </head>
 <body>
   <main class="shell">
+    <nav class="page-nav" aria-label="页面导航">
+      <a class="nav-pill" href="../standalone.html">主页面</a>
+      <a class="nav-pill is-active" href="./library.html">舞曲库</a>
+      <a class="nav-pill" href="./recognizer.html">舞曲识别</a>
+      <a class="nav-pill" href="./index.html">Web 控制台</a>
+    </nav>
     <section class="hero">
-      <div>
-        <p class="eyebrow">Dance Library</p>
-        <h1>舞曲库</h1>
-        <p>上传舞曲文件后，页面只提取舞种和舞曲名，不保存原始音频。保存后会把舞曲库数据写回 <code>3.py</code> 仓库中的 <code>dance_library.json</code>，舞曲识别页会直接复用这些数据。</p>
-      </div>
-      <div class="hero-actions">
-        <a href="../standalone.html">返回主页面</a>
+      <div class="hero-top">
+        <div class="hero-copy">
+          <p class="eyebrow">Dance Library</p>
+          <h1>舞曲库</h1>
+          <p>上传舞曲文件后，页面只提取舞种和舞曲名，不保存原始音频。保存后会把舞曲库数据写回 <code>3.py</code> 仓库中的 <code>dance_library.json</code>，舞曲识别页会直接复用这些数据。</p>
+        </div>
+        <div class="hero-actions">
+          <a href="../standalone.html">返回主页面</a>
+        </div>
       </div>
       <div class="hero-stats">
         <article class="stat"><strong id="songCount">0</strong><span>已收录舞曲</span></article>
