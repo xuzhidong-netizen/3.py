@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>舞曲识别</title>
+  <style>
+    :root {
+      --bg: #fff8f1;
+      --panel: rgba(255, 255, 255, 0.82);
+      --line: rgba(99, 60, 34, 0.14);
+      --ink: #2f1f15;
+      --muted: #725848;
+      --accent: #cf6e33;
+      --shadow: 0 24px 60px rgba(97, 56, 28, 0.12);
+      --success: #2d7f59;
+      --error: #b34d36;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 191, 149, 0.48), transparent 24%),
+        linear-gradient(180deg, #fffdf9 0%, #fff1e3 100%);
+    }
+    .shell {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero,
+    .card,
+    .status {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1, h2 {
+      margin: 0;
+      font-family: "Source Han Serif SC", "Noto Serif SC", serif;
+    }
+    h1 {
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.08;
+    }
+    p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .actions label,
+    .actions button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .actions label {
+      background: linear-gradient(135deg, #cf6e33, #e5a57c);
+      color: white;
+    }
+    .actions button {
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .actions input { display: none; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(207, 110, 51, 0.14);
+      background: linear-gradient(135deg, rgba(207, 110, 51, 0.12), rgba(255, 255, 255, 0.75));
+    }
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status {
+      padding: 14px 18px;
+      color: var(--muted);
+    }
+    .status[data-tone="success"] {
+      color: var(--success);
+      border-color: rgba(45, 127, 89, 0.24);
+      background: rgba(45, 127, 89, 0.08);
+    }
+    .status[data-tone="error"] {
+      color: var(--error);
+      border-color: rgba(179, 77, 54, 0.24);
+      background: rgba(179, 77, 54, 0.08);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+    }
+    .card {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+    .card-head {
+      display: grid;
+      gap: 8px;
+    }
+    .card-head span {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+    .item {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(207, 110, 51, 0.14);
+      background: linear-gradient(135deg, rgba(207, 110, 51, 0.1), rgba(255, 255, 255, 0.75));
+    }
+    .item strong {
+      display: block;
+      font-size: 20px;
+    }
+    .item span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+    }
+    th, td {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--accent);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(207, 110, 51, 0.12);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge.is-muted {
+      background: rgba(114, 88, 72, 0.12);
+      color: var(--muted);
+    }
+    .empty {
+      padding: 24px;
+      border-radius: 20px;
+      border: 1px dashed var(--line);
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.48);
+    }
+    code {
+      font-family: "SFMono-Regular", "Menlo", monospace;
+      font-size: 13px;
+    }
+    @media (max-width: 960px) {
+      .grid,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Dance Recognition</p>
+        <h1>舞曲识别</h1>
+        <p>识别顺序是“文件名规则优先，舞曲库回查兜底”。如果文件名没有直接写出舞种，页面会用提取到的舞曲名去查询舞曲库，并返回对应舞种。</p>
+      </div>
+      <div class="actions">
+        <label for="recognizerInput">上传文件
+          <input id="recognizerInput" type="file" accept=".mp3,.wma,.ogg,.m4a,.flac" multiple>
+        </label>
+        <button id="refreshLibraryBtn" type="button">刷新舞曲库</button>
+        <button id="clearBtn" type="button">清空结果</button>
+      </div>
+      <div class="stats">
+        <article class="stat"><strong id="totalCount">0</strong><span>文件总数</span></article>
+        <article class="stat"><strong id="filenameCount">0</strong><span>文件名识别</span></article>
+        <article class="stat"><strong id="libraryCount">0</strong><span>舞曲库识别</span></article>
+        <article class="stat"><strong id="pendingCount">0</strong><span>待确认</span></article>
+        <article class="stat"><strong id="librarySongCount">0</strong><span>舞曲库条目</span></article>
+      </div>
+    </section>
+
+    <section id="statusBar" class="status" data-tone="neutral">正在加载舞曲库数据...</section>
+
+    <section class="grid">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Recognition Results</p>
+            <h2>识别结果</h2>
+          </div>
+          <span>优先按文件名前缀识别，例如 <code>03-并四-歌名.mp3</code>。文件名无法识别时，会拿提取到的舞曲名去查询舞曲库。</span>
+        </div>
+        <div id="resultsWrap" class="empty">还没有上传文件。</div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Recognition Rules</p>
+            <h2>识别说明</h2>
+          </div>
+          <span>舞曲库与舞曲识别使用同一份 <code>dance_library.json</code>。如果你刚在舞曲库页保存过新数据，这里会自动同步，也可以手动点“刷新舞曲库”。</span>
+        </div>
+        <div class="list">
+          <article class="item">
+            <strong>第一优先级：文件名规则</strong>
+            <span>适合已经按项目命名规则整理过的舞曲文件，速度最快，结果也最稳定。</span>
+          </article>
+          <article class="item">
+            <strong>第二优先级：舞曲库匹配</strong>
+            <span>如果文件名里没写舞种，页面会提取舞曲名并查询舞曲库，返回库里保存的舞种。</span>
+          </article>
+          <article class="item">
+            <strong>无法确认时保持待确认</strong>
+            <span>如果舞曲库里匹配到多个舞种，或根本没查到对应舞曲，结果会保留为“待确认”，避免误判。</span>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./dance_library_tools.js"></script>
+  <script>
+    const tools = window.DanceLibraryTools;
+    const state = {
+      libraryData: tools.defaultLibraryData(),
+      rows: [],
+      files: [],
+      syncChannel: tools.createSyncChannel(),
+    };
+
+    const els = {
+      recognizerInput: document.getElementById("recognizerInput"),
+      refreshLibraryBtn: document.getElementById("refreshLibraryBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      statusBar: document.getElementById("statusBar"),
+      totalCount: document.getElementById("totalCount"),
+      filenameCount: document.getElementById("filenameCount"),
+      libraryCount: document.getElementById("libraryCount"),
+      pendingCount: document.getElementById("pendingCount"),
+      librarySongCount: document.getElementById("librarySongCount"),
+      resultsWrap: document.getElementById("resultsWrap"),
+    };
+
+    function setStatus(message, tone) {
+      els.statusBar.dataset.tone = tone || "neutral";
+      els.statusBar.textContent = message;
+    }
+
+    function analyzeFile(file) {
+      const parsed = tools.parseSongFileName(file.name);
+      let dance = parsed.dance;
+      let source = "";
+      let status = "";
+      let matchedTitle = "";
+
+      if (dance) {
+        source = "文件名规则";
+        status = "已识别";
+      } else {
+        const resolved = tools.resolveDanceFromLibrary(state.libraryData, parsed);
+        if (resolved.dance) {
+          dance = resolved.dance;
+          source = "舞曲库";
+          status = resolved.mode === "exact" ? "舞曲库精确匹配" : "舞曲库近似匹配";
+          matchedTitle = resolved.match?.title || "";
+        } else if (resolved.ambiguous) {
+          source = "舞曲库";
+          status = "匹配到多个舞种，待确认";
+        } else {
+          status = "未识别";
+        }
+      }
+
+      return {
+        fileName: file.name,
+        title: parsed.title || parsed.raw || parsed.stem,
+        dance,
+        group: tools.classifyDanceGroup(dance),
+        source,
+        status,
+        matchedTitle,
+      };
+    }
+
+    function reanalyzeFiles() {
+      state.rows = state.files.map((file) => analyzeFile(file));
+      renderAll();
+    }
+
+    function renderStats() {
+      els.totalCount.textContent = String(state.rows.length);
+      els.filenameCount.textContent = String(state.rows.filter((row) => row.source === "文件名规则").length);
+      els.libraryCount.textContent = String(state.rows.filter((row) => row.source === "舞曲库" && row.dance).length);
+      els.pendingCount.textContent = String(state.rows.filter((row) => !row.dance).length);
+      els.librarySongCount.textContent = String(state.libraryData.songs.length);
+    }
+
+    function renderResults() {
+      if (!state.rows.length) {
+        els.resultsWrap.className = "empty";
+        els.resultsWrap.innerHTML = "还没有上传文件。";
+        return;
+      }
+
+      els.resultsWrap.className = "table-wrap";
+      els.resultsWrap.innerHTML = `<table>
+        <thead>
+          <tr><th>文件名</th><th>提取舞曲名</th><th>舞种</th><th>分类</th><th>来源</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          ${state.rows.map((row) => `
+            <tr>
+              <td>${tools.escapeHtml(row.fileName)}</td>
+              <td>${tools.escapeHtml(row.title || "-")}</td>
+              <td>${row.dance ? `<span class="badge">${tools.escapeHtml(row.dance)}</span>` : `<span class="badge is-muted">未识别</span>`}</td>
+              <td>${row.group ? `<span class="badge">${tools.escapeHtml(row.group)}</span>` : `<span class="badge is-muted">待确认</span>`}</td>
+              <td>${row.source ? `<span class="badge">${tools.escapeHtml(row.source)}</span>` : `<span class="badge is-muted">未命中</span>`}</td>
+              <td>${row.matchedTitle ? tools.escapeHtml(`${row.status}：${row.matchedTitle}`) : tools.escapeHtml(row.status || "待确认")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    function renderAll() {
+      renderStats();
+      renderResults();
+    }
+
+    async function refreshLibrary(silent) {
+      try {
+        const result = await tools.loadLibraryData();
+        state.libraryData = result.data;
+        if (state.files.length) {
+          reanalyzeFiles();
+        } else {
+          renderAll();
+        }
+        if (!silent) {
+          setStatus(`舞曲库已刷新，共 ${state.libraryData.songs.length} 条。`, "success");
+        }
+      } catch (error) {
+        setStatus(error.message || "舞曲库加载失败。", "error");
+      }
+    }
+
+    els.recognizerInput.addEventListener("change", (event) => {
+      state.files = Array.from(event.target.files || []);
+      reanalyzeFiles();
+      setStatus(`已分析 ${state.files.length} 个文件。`, "success");
+    });
+
+    els.refreshLibraryBtn.addEventListener("click", () => {
+      refreshLibrary(false);
+    });
+
+    els.clearBtn.addEventListener("click", () => {
+      state.files = [];
+      state.rows = [];
+      els.recognizerInput.value = "";
+      renderAll();
+      setStatus("已清空识别结果。", "success");
+    });
+
+    if (state.syncChannel) {
+      state.syncChannel.onmessage = (event) => {
+        if (event.data?.type !== "library-updated") return;
+        state.libraryData = tools.normalizeLibraryData(event.data.data);
+        if (state.files.length) {
+          reanalyzeFiles();
+        } else {
+          renderAll();
+        }
+        setStatus("舞曲库已同步更新，识别结果已刷新。", "success");
+      };
+    }
+
+    renderAll();
+    refreshLibrary(false);
+  </script>
+</body>
+</html>

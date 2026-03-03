@@ -2066,22 +2066,20 @@
       log(mode === "snapshot" ? "已打开快照大屏页面" : "已打开大屏 HTML 页面");
     }
 
+    function auxiliaryPageUrl(relativePath) {
+      return new URL(relativePath, window.location.href).toString();
+    }
+
     function openLibraryView() {
-      const libraryWindow = window.open("", "_blank");
+      const libraryWindow = window.open(auxiliaryPageUrl("./web_static/library.html"), "_blank");
       if (!libraryWindow) throw new Error("浏览器阻止了舞曲库页面弹出");
-      libraryWindow.document.open();
-      libraryWindow.document.write(buildLibraryHtml());
-      libraryWindow.document.close();
       libraryWindow.focus();
       log("已打开舞曲库页面");
     }
 
     function openRecognizerView() {
-      const recognizerWindow = window.open("", "_blank");
+      const recognizerWindow = window.open(auxiliaryPageUrl("./web_static/recognizer.html"), "_blank");
       if (!recognizerWindow) throw new Error("浏览器阻止了舞曲识别页面弹出");
-      recognizerWindow.document.open();
-      recognizerWindow.document.write(buildRecognizerHtml());
-      recognizerWindow.document.close();
       recognizerWindow.focus();
       log("已打开舞曲识别页面");
     }

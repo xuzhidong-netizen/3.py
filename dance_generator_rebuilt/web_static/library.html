@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>舞曲库</title>
+  <style>
+    :root {
+      --bg: #fff7ef;
+      --panel: rgba(255, 255, 255, 0.82);
+      --line: rgba(114, 70, 35, 0.14);
+      --ink: #2f1f15;
+      --muted: #725848;
+      --accent: #cf6e33;
+      --shadow: 0 24px 60px rgba(97, 56, 28, 0.12);
+      --success: #2d7f59;
+      --error: #b34d36;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 191, 149, 0.48), transparent 26%),
+        radial-gradient(circle at 85% 15%, rgba(255, 230, 207, 0.88), transparent 20%),
+        linear-gradient(180deg, #fffdf9 0%, #fff2e5 100%);
+    }
+    .shell {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero,
+    .card,
+    .status {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      display: grid;
+      gap: 20px;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.45) 48%, transparent 72%);
+      transform: translateX(-140%);
+      animation: sweep 7s linear infinite;
+      pointer-events: none;
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1, h2 {
+      margin: 0;
+      font-family: "Source Han Serif SC", "Noto Serif SC", serif;
+    }
+    h1 {
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.08;
+    }
+    p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .stat {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(207, 110, 51, 0.14);
+      background: linear-gradient(135deg, rgba(207, 110, 51, 0.12), rgba(255, 255, 255, 0.75));
+    }
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status {
+      padding: 14px 18px;
+      color: var(--muted);
+    }
+    .status[data-tone="success"] {
+      color: var(--success);
+      border-color: rgba(45, 127, 89, 0.24);
+      background: rgba(45, 127, 89, 0.08);
+    }
+    .status[data-tone="error"] {
+      color: var(--error);
+      border-color: rgba(179, 77, 54, 0.24);
+      background: rgba(179, 77, 54, 0.08);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+    .card {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+    .card-head {
+      display: grid;
+      gap: 8px;
+    }
+    .card-head span {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .actions label,
+    .actions button,
+    .settings button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .actions label {
+      background: linear-gradient(135deg, #cf6e33, #e5a57c);
+      color: white;
+    }
+    .actions button,
+    .settings button {
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .actions input { display: none; }
+    .settings {
+      display: grid;
+      gap: 12px;
+    }
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+    .field span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .field input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      font: inherit;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+    }
+    .settings-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .token-state {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .search-box {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      font: inherit;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+    }
+    th, td {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--accent);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(207, 110, 51, 0.12);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge.is-muted {
+      background: rgba(114, 88, 72, 0.12);
+      color: var(--muted);
+    }
+    .empty {
+      padding: 24px;
+      border-radius: 20px;
+      border: 1px dashed var(--line);
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.48);
+    }
+    code {
+      font-family: "SFMono-Regular", "Menlo", monospace;
+      font-size: 13px;
+    }
+    @keyframes sweep {
+      from { transform: translateX(-140%); }
+      to { transform: translateX(160%); }
+    }
+    @media (max-width: 960px) {
+      .hero-stats,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Dance Library</p>
+        <h1>舞曲库</h1>
+        <p>上传舞曲文件后，页面只提取舞种和舞曲名，不保存原始音频。保存后会把舞曲库数据写回 <code>3.py</code> 仓库中的 <code>dance_library.json</code>，舞曲识别页会直接复用这些数据。</p>
+      </div>
+      <div class="hero-stats">
+        <article class="stat"><strong id="songCount">0</strong><span>已收录舞曲</span></article>
+        <article class="stat"><strong id="danceCount">0</strong><span>覆盖舞种</span></article>
+        <article class="stat"><strong id="pendingCount">0</strong><span>待保存</span></article>
+        <article class="stat"><strong id="updatedAt">未保存</strong><span>最近同步</span></article>
+      </div>
+    </section>
+
+    <section id="statusBar" class="status" data-tone="neutral">正在加载舞曲库数据...</section>
+
+    <section class="grid">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Import</p>
+            <h2>上传并保存</h2>
+          </div>
+          <span>建议上传已经按项目命名规则整理好的文件，例如 <code>03-并四-歌名.mp3</code>。无法提取到舞种或舞曲名的文件会被跳过，不会写入舞曲库。</span>
+        </div>
+        <div class="actions">
+          <label for="uploadInput">选择舞曲文件
+            <input id="uploadInput" type="file" accept=".mp3,.wma,.ogg,.m4a,.flac" multiple>
+          </label>
+          <button id="saveBtn" type="button">保存到 GitHub</button>
+          <button id="refreshBtn" type="button">刷新舞曲库</button>
+        </div>
+        <div class="settings">
+          <div class="field">
+            <span>GitHub Token（需要对 <code>xuzhidong-netizen/3.py</code> 具备 Contents 写权限，仅保存在当前浏览器）</span>
+            <input id="tokenInput" type="password" placeholder="首次使用时填写 GitHub Token">
+          </div>
+          <div class="settings-actions">
+            <button id="saveTokenBtn" type="button">保存令牌</button>
+            <button id="clearTokenBtn" type="button">清除令牌</button>
+            <span id="tokenState" class="token-state">尚未保存 GitHub Token</span>
+          </div>
+        </div>
+        <div id="uploadPreview" class="empty">还没有上传文件。</div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Search</p>
+            <h2>舞曲查询</h2>
+          </div>
+          <span>输入舞曲名后，可以查询对应舞种。查询结果会按最接近的匹配方式排序，并与舞曲识别页使用同一份舞曲库数据。</span>
+        </div>
+        <input id="queryInput" class="search-box" type="search" placeholder="输入舞曲名，例如 月亮惹的祸">
+        <div id="queryResults" class="empty">输入舞曲名后即可查询对应舞种。</div>
+      </section>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Library Data</p>
+          <h2>当前舞曲库</h2>
+        </div>
+        <span>这里展示当前已经同步到仓库的数据。舞曲识别页刷新后会直接读取这里的内容。</span>
+      </div>
+      <div id="libraryTable" class="empty">舞曲库里还没有数据。</div>
+    </section>
+  </main>
+
+  <script src="./dance_library_tools.js"></script>
+  <script>
+    const tools = window.DanceLibraryTools;
+    const state = {
+      data: tools.defaultLibraryData(),
+      pending: [],
+      busy: false,
+      syncChannel: tools.createSyncChannel(),
+    };
+
+    const els = {
+      songCount: document.getElementById("songCount"),
+      danceCount: document.getElementById("danceCount"),
+      pendingCount: document.getElementById("pendingCount"),
+      updatedAt: document.getElementById("updatedAt"),
+      statusBar: document.getElementById("statusBar"),
+      uploadInput: document.getElementById("uploadInput"),
+      uploadPreview: document.getElementById("uploadPreview"),
+      saveBtn: document.getElementById("saveBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      tokenInput: document.getElementById("tokenInput"),
+      saveTokenBtn: document.getElementById("saveTokenBtn"),
+      clearTokenBtn: document.getElementById("clearTokenBtn"),
+      tokenState: document.getElementById("tokenState"),
+      queryInput: document.getElementById("queryInput"),
+      queryResults: document.getElementById("queryResults"),
+      libraryTable: document.getElementById("libraryTable"),
+    };
+
+    function formatTime(value) {
+      if (!value) return "未保存";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function setStatus(message, tone) {
+      els.statusBar.dataset.tone = tone || "neutral";
+      els.statusBar.textContent = message;
+    }
+
+    function updateTokenState() {
+      els.tokenState.textContent = tools.getGitHubToken() ? "当前浏览器已保存 GitHub Token" : "尚未保存 GitHub Token";
+    }
+
+    function renderStats() {
+      const songs = state.data.songs || [];
+      els.songCount.textContent = String(songs.length);
+      els.danceCount.textContent = String(new Set(songs.map((song) => song.dance)).size);
+      els.pendingCount.textContent = String(state.pending.filter((item) => item.valid).length);
+      els.updatedAt.textContent = formatTime(state.data.updated_at);
+      updateTokenState();
+    }
+
+    function renderUploadPreview() {
+      if (!state.pending.length) {
+        els.uploadPreview.className = "empty";
+        els.uploadPreview.innerHTML = "还没有上传文件。";
+        return;
+      }
+
+      els.uploadPreview.className = "table-wrap";
+      els.uploadPreview.innerHTML = `<table>
+        <thead>
+          <tr><th>文件名</th><th>提取舞曲名</th><th>舞种</th><th>分类</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          ${state.pending.map((item) => `
+            <tr>
+              <td>${tools.escapeHtml(item.fileName)}</td>
+              <td>${tools.escapeHtml(item.title || "-")}</td>
+              <td>${item.dance ? `<span class="badge">${tools.escapeHtml(item.dance)}</span>` : `<span class="badge is-muted">未提取</span>`}</td>
+              <td>${item.group ? `<span class="badge">${tools.escapeHtml(item.group)}</span>` : `<span class="badge is-muted">待确认</span>`}</td>
+              <td>${item.valid ? `<span class="badge">待保存</span>` : `<span class="badge is-muted">${tools.escapeHtml(item.reason)}</span>`}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    function renderQueryResults() {
+      const query = els.queryInput.value.trim();
+      if (!query) {
+        els.queryResults.className = "empty";
+        els.queryResults.innerHTML = "输入舞曲名后即可查询对应舞种。";
+        return;
+      }
+
+      const matches = tools.queryLibrarySongs(state.data, query);
+      if (!matches.length) {
+        els.queryResults.className = "empty";
+        els.queryResults.innerHTML = "没有查到对应舞曲。";
+        return;
+      }
+
+      els.queryResults.className = "table-wrap";
+      els.queryResults.innerHTML = `<table>
+        <thead>
+          <tr><th>舞曲名</th><th>舞种</th><th>分类</th><th>最近更新</th></tr>
+        </thead>
+        <tbody>
+          ${matches.slice(0, 20).map((song) => `
+            <tr>
+              <td>${tools.escapeHtml(song.title)}</td>
+              <td><span class="badge">${tools.escapeHtml(song.dance)}</span></td>
+              <td>${song.dance ? `<span class="badge">${tools.escapeHtml(tools.classifyDanceGroup(song.dance))}</span>` : `<span class="badge is-muted">待确认</span>`}</td>
+              <td>${tools.escapeHtml(formatTime(song.updated_at))}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    function renderLibraryTable() {
+      const songs = state.data.songs || [];
+      if (!songs.length) {
+        els.libraryTable.className = "empty";
+        els.libraryTable.innerHTML = "舞曲库里还没有数据。";
+        return;
+      }
+
+      els.libraryTable.className = "table-wrap";
+      els.libraryTable.innerHTML = `<table>
+        <thead>
+          <tr><th>舞曲名</th><th>舞种</th><th>分类</th><th>最近更新</th></tr>
+        </thead>
+        <tbody>
+          ${songs.map((song) => `
+            <tr>
+              <td>${tools.escapeHtml(song.title)}</td>
+              <td><span class="badge">${tools.escapeHtml(song.dance)}</span></td>
+              <td>${song.dance ? `<span class="badge">${tools.escapeHtml(tools.classifyDanceGroup(song.dance))}</span>` : `<span class="badge is-muted">待确认</span>`}</td>
+              <td>${tools.escapeHtml(formatTime(song.updated_at))}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    function renderAll() {
+      renderStats();
+      renderUploadPreview();
+      renderQueryResults();
+      renderLibraryTable();
+    }
+
+    async function refreshLibrary(silent) {
+      try {
+        const result = await tools.loadLibraryData();
+        state.data = result.data;
+        renderAll();
+        if (!silent) {
+          setStatus(`已加载舞曲库，共 ${state.data.songs.length} 首舞曲。`, "success");
+        }
+      } catch (error) {
+        setStatus(error.message || "舞曲库加载失败。", "error");
+      }
+    }
+
+    function collectPendingEntries(files) {
+      state.pending = Array.from(files || []).map((file) => {
+        const parsed = tools.parseSongFileName(file.name);
+        const valid = Boolean(parsed.dance && parsed.title);
+        return {
+          fileName: file.name,
+          title: parsed.title,
+          dance: parsed.dance,
+          group: tools.classifyDanceGroup(parsed.dance),
+          valid,
+          reason: valid ? "" : "无法提取舞种或舞曲名",
+        };
+      });
+      renderAll();
+      const validCount = state.pending.filter((item) => item.valid).length;
+      setStatus(`已读取 ${state.pending.length} 个文件，其中 ${validCount} 个可写入舞曲库。`, "success");
+    }
+
+    async function savePendingEntries() {
+      if (state.busy) return;
+      const validEntries = state.pending.filter((item) => item.valid);
+      if (!validEntries.length) {
+        setStatus("没有可保存的舞曲条目。", "error");
+        return;
+      }
+
+      const typedToken = els.tokenInput.value.trim();
+      if (typedToken) {
+        tools.setGitHubToken(typedToken);
+      }
+      if (!tools.getGitHubToken()) {
+        setStatus("请先填写并保存 GitHub Token。", "error");
+        return;
+      }
+
+      const merged = tools.mergeLibraryEntries(state.data, validEntries);
+      state.busy = true;
+      els.saveBtn.textContent = "保存中...";
+      els.saveBtn.disabled = true;
+      try {
+        const result = await tools.saveLibraryDataToGitHub(merged.data);
+        state.data = result.data;
+        state.pending = [];
+        els.uploadInput.value = "";
+        els.tokenInput.value = "";
+        renderAll();
+        setStatus(`已保存到 GitHub，新增 ${merged.added} 首，更新 ${merged.updated} 首。`, "success");
+      } catch (error) {
+        setStatus(error.message || "保存到 GitHub 失败。", "error");
+      } finally {
+        state.busy = false;
+        els.saveBtn.textContent = "保存到 GitHub";
+        els.saveBtn.disabled = false;
+      }
+    }
+
+    els.uploadInput.addEventListener("change", (event) => {
+      collectPendingEntries(event.target.files);
+    });
+
+    els.refreshBtn.addEventListener("click", () => {
+      refreshLibrary(false);
+    });
+
+    els.saveBtn.addEventListener("click", () => {
+      savePendingEntries();
+    });
+
+    els.saveTokenBtn.addEventListener("click", () => {
+      const token = els.tokenInput.value.trim();
+      if (!token) {
+        setStatus("请输入 GitHub Token 后再保存。", "error");
+        return;
+      }
+      tools.setGitHubToken(token);
+      els.tokenInput.value = "";
+      updateTokenState();
+      setStatus("GitHub Token 已保存到当前浏览器。", "success");
+    });
+
+    els.clearTokenBtn.addEventListener("click", () => {
+      tools.clearGitHubToken();
+      els.tokenInput.value = "";
+      updateTokenState();
+      setStatus("已清除当前浏览器中的 GitHub Token。", "success");
+    });
+
+    els.queryInput.addEventListener("input", () => {
+      renderQueryResults();
+    });
+
+    if (state.syncChannel) {
+      state.syncChannel.onmessage = (event) => {
+        if (event.data?.type !== "library-updated") return;
+        state.data = tools.normalizeLibraryData(event.data.data);
+        renderAll();
+        setStatus("舞曲库已同步到最新版本。", "success");
+      };
+    }
+
+    renderAll();
+    refreshLibrary(false);
+  </script>
+</body>
+</html>

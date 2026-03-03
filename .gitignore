@@ -12,6 +12,8 @@
 *.html
 !index.html
 !dance_generator_rebuilt/standalone.html
+!dance_generator_rebuilt/web_static/library.html
+!dance_generator_rebuilt/web_static/recognizer.html
 /.idea
 /.vscode
 /cache
