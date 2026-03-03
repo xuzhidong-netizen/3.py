@@ -266,10 +266,13 @@ def test_directory_import_reverts_to_simple_flow() -> None:
     html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
 
     assert "async function loadFiles()" in html
+    assert "async function yieldToBrowser()" in html
     assert "已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个" in html
-    assert "正在解析舞曲 ${i + 1}/${files.length}" in html
+    assert "正在解析舞曲 ${i + 1}/${files.length} · ${currentName}" in html
+    assert "if ((i + 1) % 5 === 0) {" in html
     assert "await syncSongsToDanceLibrary(\"读取文件\")" in html
     assert "async function extractArchiveFiles(archiveFiles, progress = null)" in html
+    assert "if ((entryIndex + 1) % 10 === 0) {" in html
     assert "function createTaskGuard(label, progress = null, options = {})" not in html
     assert "function createImportRestartError(message = \"导入任务已由保护机制自动重启\")" not in html
     assert "function ensureImportRunActive(runId)" not in html
