@@ -203,8 +203,12 @@ def test_large_import_uses_fast_mode_guards() -> None:
     assert "const LARGE_IMPORT_FILE_THRESHOLD = 120;" in html
     assert "const HUGE_IMPORT_FILE_THRESHOLD = 320;" in html
     assert "const IMPORT_YIELD_INTERVAL = 20;" in html
+    assert "const IMPORT_GUARD_STALL_MS = 8000;" in html
+    assert "const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;" in html
     assert "已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定" in html
-    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {})" in html
+    assert "function createTaskGuard(label, progress = null)" in html
+    assert "保护中：" in html
+    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null)" in html
     assert "backgroundLibrarySync: fastMode" in html
     assert "舞曲库同步将在后台继续" in html
     assert "song.url = URL.createObjectURL(song.file);" in html

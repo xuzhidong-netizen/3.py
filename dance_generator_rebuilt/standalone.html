@@ -1203,6 +1203,8 @@
     const LARGE_IMPORT_FILE_THRESHOLD = 120;
     const HUGE_IMPORT_FILE_THRESHOLD = 320;
     const IMPORT_YIELD_INTERVAL = 20;
+    const IMPORT_GUARD_STALL_MS = 8000;
+    const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;
 
     function $(id) { return document.getElementById(id); }
 
@@ -1292,6 +1294,51 @@
           if (nextText === lastText) return;
           entry.textContent = nextText;
           lastText = nextText;
+        }
+      };
+    }
+
+    function createTaskGuard(label, progress = null) {
+      let active = true;
+      let stage = "准备中";
+      let detail = "";
+      let progressValue = 0;
+      let lastPulseAt = Date.now();
+      let lastWarningAt = 0;
+
+      const timer = window.setInterval(() => {
+        if (!active) return;
+        const idleMs = Date.now() - lastPulseAt;
+        if (idleMs < IMPORT_GUARD_STALL_MS) return;
+        if (lastWarningAt && idleMs - lastWarningAt < IMPORT_GUARD_STALL_MS) return;
+        lastWarningAt = idleMs;
+        const seconds = Math.max(1, Math.round(idleMs / 1000));
+        const hint = `${stage}${detail ? `，${detail}` : ""}`;
+        progress?.update(progressValue, `${hint}，浏览器较慢，已启用保护等待 ${seconds} 秒`);
+        log(`${label}保护中：${hint}，已持续等待 ${seconds} 秒`);
+      }, IMPORT_GUARD_LOG_INTERVAL_MS);
+
+      const touch = (nextStage = stage, nextDetail = detail, nextProgress = progressValue) => {
+        stage = nextStage || stage;
+        detail = nextDetail || "";
+        progressValue = clampPercent(nextProgress);
+        lastPulseAt = Date.now();
+      };
+
+      return {
+        update(nextStage, nextDetail = "", nextProgress = progressValue) {
+          touch(nextStage, nextDetail, nextProgress);
+        },
+        complete() {
+          active = false;
+          window.clearInterval(timer);
+        },
+        fail(message = "") {
+          active = false;
+          window.clearInterval(timer);
+          if (message) {
+            log(`${label}保护结束：${message}`);
+          }
         }
       };
     }
@@ -1792,7 +1839,7 @@
       };
     }
 
-    async function importDirectoryFiles(files, progress = null, parseOptions = {}) {
+    async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null) {
       cleanupSongUrls();
       state.parts = [];
       let currentPart = null;
@@ -1820,11 +1867,19 @@
               throw error;
             }
             skippedCount += 1;
+            log(`目录导入跳过 ${file.name}：${error.message || error}`);
           }
         }
+        const lastFile = files[endIndex - 1];
+        const currentName = lastFile ? (fileRelativePath(lastFile) || lastFile.name) : "";
         progress?.update(
           30 + Math.round((endIndex / Math.max(totalFiles, 1)) * 58),
-          `${parseOptions.fastMode ? "正在分批解析舞曲" : "正在解析舞曲"} ${endIndex}/${totalFiles}`
+          `${parseOptions.fastMode ? "正在分批解析舞曲" : "正在解析舞曲"} ${endIndex}/${totalFiles}${currentName ? ` · ${currentName}` : ""}`
+        );
+        guard?.update(
+          parseOptions.fastMode ? "分批解析舞曲" : "解析舞曲",
+          `已完成 ${endIndex}/${totalFiles}${currentName ? `，当前 ${currentName}` : ""}`,
+          30 + Math.round((endIndex / Math.max(totalFiles, 1)) * 58)
         );
         if (endIndex < totalFiles) {
           await yieldToBrowser();
@@ -1834,7 +1889,7 @@
       return { skippedCount };
     }
 
-    async function extractArchiveFiles(archiveFiles, progress = null) {
+    async function extractArchiveFiles(archiveFiles, progress = null, guard = null) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
@@ -1842,6 +1897,7 @@
       for (let archiveIndex = 0; archiveIndex < archiveFiles.length; archiveIndex += 1) {
         const archiveFile = archiveFiles[archiveIndex];
         const archiveBase = archiveFile.name.replace(/\.zip$/i, "") || "压缩包";
+        guard?.update("读取压缩包", `${archiveFile.name} ${archiveIndex + 1}/${archiveFiles.length}`, 10);
         progress?.update(
           10 + Math.floor((archiveIndex / Math.max(archiveFiles.length, 1)) * 15),
           `正在读取压缩包 ${archiveIndex + 1}/${archiveFiles.length}：${archiveFile.name}`
@@ -1869,9 +1925,14 @@
           });
           file.relativePath = normalizePath(`${archiveBase}/${entry.name}`);
           extracted.push(file);
+          guard?.update(
+            "解压压缩包",
+            `${archiveFile.name} ${entryIndex + 1}/${entries.length} · ${fileName}`,
+            25
+          );
           progress?.update(
             25,
-            `正在解压 ${archiveFile.name} ${entryIndex + 1}/${entries.length}`
+            `正在解压 ${archiveFile.name} ${entryIndex + 1}/${entries.length} · ${fileName}`
           );
           if ((entryIndex + 1) % IMPORT_YIELD_INTERVAL === 0) {
             await yieldToBrowser();
@@ -4775,21 +4836,26 @@
 
     async function loadFiles() {
       const progress = createProgressLogger("读取舞曲进度");
+      const guard = createTaskGuard("读取舞曲", progress);
       const audioFiles = [...els.fileInput.files].filter(file => AUDIO_FILE_PATTERN.test(file.name));
       const archiveFiles = [...els.archiveInput.files].filter(file => /\.zip$/i.test(file.name));
       if (!audioFiles.length && !archiveFiles.length) {
         progress.fail("没有可读取的文件");
+        guard.fail("没有可读取的文件");
         log("没有可读取的音频文件或 ZIP 压缩包");
         return;
       }
       try {
+        guard.update("准备读取文件", `目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`, 5);
         progress.update(5, `已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`);
+        log(`读取详情：目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`);
         const files = [...audioFiles];
         if (archiveFiles.length) {
-          files.push(...await extractArchiveFiles(archiveFiles, progress));
+          files.push(...await extractArchiveFiles(archiveFiles, progress, guard));
         }
         if (!files.length) {
           progress.fail("没有可导入的舞曲文件");
+          guard.fail("没有可导入的舞曲文件");
           log("没有可导入的舞曲文件");
           return;
         }
@@ -4797,9 +4863,11 @@
         if (parseOptions.fastMode) {
           log(`本次共读取 ${files.length} 首舞曲，已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定`);
         }
-        const importSummary = await importDirectoryFiles(files, progress, parseOptions);
+        guard.update("准备解析舞曲", `共 ${files.length} 首${parseOptions.fastMode ? "，已启用快速模式" : ""}`, 28);
+        const importSummary = await importDirectoryFiles(files, progress, parseOptions, guard);
         renumber();
         state.issues = [];
+        guard.update("写入舞曲表", `共 ${allSongs().length} 首`, 95);
         progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
         await yieldToBrowser();
         renderAll();
@@ -4811,13 +4879,17 @@
         els.archiveInput.value = "";
         if (parseOptions.backgroundLibrarySync) {
           progress.done(`已完成，共 ${allSongs().length} 首；舞曲库同步将在后台继续`);
+          guard.complete();
           scheduleDanceLibrarySync("读取文件", "大批量导入后的舞曲库后台同步已完成");
           return;
         }
+        guard.update("同步舞曲库", `准备保存 ${allSongs().length} 首的舞曲信息`, 98);
         await syncSongsToDanceLibrary("读取文件");
         progress.done(`已完成，共 ${allSongs().length} 首`);
+        guard.complete();
       } catch (error) {
         progress.fail(error.message || error);
+        guard.fail(error.message || error);
         throw error;
       }
     }
