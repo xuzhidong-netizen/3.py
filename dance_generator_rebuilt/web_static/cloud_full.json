@@ -9,6 +9,67 @@
     "周二",
     "19:00"
   ],
-  "download_url": "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip",
-  "tracks": []
+  "download_url": "./1.24-top5.zip",
+  "tracks": [
+    {
+      "num": 1,
+      "dance": "慢四",
+      "title": "星月神话",
+      "other": "金莎",
+      "choose": false,
+      "duration": 210,
+      "part_title": "",
+      "asset_name": "01-慢四-星月神话-金莎.mp3",
+      "audio_url": "",
+      "source": "01-慢四-星月神话-金莎.mp3"
+    },
+    {
+      "num": 2,
+      "dance": "吉特巴",
+      "title": "说爱你",
+      "other": "蔡依林",
+      "choose": false,
+      "duration": 210,
+      "part_title": "",
+      "asset_name": "02-吉特巴-说爱你-蔡依林.mp3",
+      "audio_url": "",
+      "source": "02-吉特巴-说爱你-蔡依林.mp3"
+    },
+    {
+      "num": 3,
+      "dance": "并四",
+      "title": "慢热",
+      "other": "满舒克",
+      "choose": false,
+      "duration": 210,
+      "part_title": "",
+      "asset_name": "03-并四-慢热-满舒克.mp3",
+      "audio_url": "",
+      "source": "03-并四-慢热-满舒克.mp3"
+    },
+    {
+      "num": 4,
+      "dance": "平四",
+      "title": "生生世世爱",
+      "other": "吴雨霏",
+      "choose": false,
+      "duration": 210,
+      "part_title": "",
+      "asset_name": "04-平四-生生世世爱-吴雨霏.mp3",
+      "audio_url": "",
+      "source": "04-平四-生生世世爱-吴雨霏.mp3"
+    },
+    {
+      "num": 5,
+      "dance": "慢三",
+      "title": "飘摇",
+      "other": "周迅",
+      "choose": false,
+      "duration": 210,
+      "part_title": "",
+      "asset_name": "05-慢三-飘摇-周迅.mp3",
+      "audio_url": "",
+      "source": "05-慢三-飘摇-周迅.mp3"
+    }
+  ]
 }

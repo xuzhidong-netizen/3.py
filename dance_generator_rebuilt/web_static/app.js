@@ -7,8 +7,10 @@ const CLUBS = [
 
 const PLACES = ["老年活动中心", "紫菘活动中心", "博士生之家", "韵苑体育馆", "西教工西厅", "东教工二楼"];
 const CLOUD_SAMPLE_URL = "/static/示范舞曲-top3.zip";
+const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
 const CLOUD_PLAYLIST_URL = "/static/cloud_sample.json";
-const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";
+const CLOUD_FULL_URL = "/static/1.24-top5.zip";
+const CLOUD_FULL_ARCHIVE_NAME = "示范舞曲-top5.zip";
 const CLOUD_FULL_PLAYLIST_URL = "/static/cloud_full.json";
 
 const state = {
@@ -412,9 +414,9 @@ function startSequencePlayback() {
 function wireButtons() {
   document.getElementById("loadBtn").addEventListener("click", () => handleLoad().catch((error) => log(error.message)));
   document.getElementById("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch((error) => log(error.message)));
-  document.getElementById("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, "示范舞曲-top3.zip"));
+  document.getElementById("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME));
   document.getElementById("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch((error) => log(error.message)));
-  document.getElementById("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip"));
+  document.getElementById("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME));
   document.getElementById("syncBtn").addEventListener("click", () => refreshState().then(() => log("列表已更新")).catch((error) => log(error.message)));
   document.getElementById("checkBtn").addEventListener("click", () => handleCheck().catch((error) => log(error.message)));
   document.getElementById("exportBtn").addEventListener("click", () => handleExport().catch((error) => log(error.message)));
@@ -480,15 +482,15 @@ async function loadCloudFullSample() {
     const playlist = await response.json();
     const playableTracks = (playlist.tracks || []).filter((track) => track.audio_url);
     if (!playableTracks.length) {
-      log("云端全部歌单暂未配置单曲直链，已打开全部示范舞曲下载链接");
-      triggerDownload(playlist.download_url || CLOUD_FULL_URL, "示范舞曲.zip");
+      log("云端全部歌单暂未配置单曲直链，已打开示范舞曲压缩包下载链接");
+      triggerDownload(playlist.download_url || CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       return;
     }
     log(`云端全部歌单已配置 ${playableTracks.length} 首可直播放舞曲，当前 Web 版后续可继续接入完整导入。`);
-    triggerDownload(playlist.download_url || CLOUD_FULL_URL, "示范舞曲.zip");
+    triggerDownload(playlist.download_url || CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
   } catch (error) {
-    log(`${error.message}，已打开全部示范舞曲下载链接`);
-    triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip");
+    log(`${error.message}，已打开示范舞曲压缩包下载链接`);
+    triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
   }
 }
 

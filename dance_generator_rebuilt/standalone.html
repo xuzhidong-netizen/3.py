@@ -536,6 +536,10 @@
             <input id="fileInput" type="file" webkitdirectory multiple>
           </label>
           <label>
+            <span>导入 ZIP 压缩包</span>
+            <input id="archiveInput" type="file" accept=".zip,application/zip" multiple>
+          </label>
+          <label>
             <span>标题</span>
             <input id="titleInput" value="青春舞会舞曲">
           </label>
@@ -581,7 +585,7 @@
           <button id="downloadHtmlBtn">打开大屏页面</button>
           <button id="snapshotBtn">打开快照大屏</button>
         </div>
-        <p class="hint">说明：浏览器版不能像桌面程序那样直接批量重命名/复制本地文件，但可以导出歌单文件和播放预览。</p>
+        <p class="hint">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；不会上传本地音频文件。</p>
       </section>
 
       <section class="card">
@@ -697,9 +701,12 @@
     const BALLROOM = ["华尔兹", "探戈", "维也纳", "狐步", "快步", "国标伦巴", "国标恰恰", "桑巴", "牛仔", "斗牛", "阿根廷探戈"];
     const COLLECTIVE = ["青春16步", "花火16步", "32步", "64步", "兔子舞", "集体恰恰", "阿拉伯之夜", "马卡琳娜", "玛卡琳娜", "蒙古舞"];
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
+    const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
     const CLOUD_SAMPLE_URL = "./web_static/示范舞曲-top3.zip";
+    const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "./cloud_sample.json";
-    const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";
+    const CLOUD_FULL_URL = "./web_static/1.24-top5.zip";
+    const CLOUD_FULL_ARCHIVE_NAME = "示范舞曲-top5.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
 
     const state = {
@@ -742,7 +749,7 @@
     }
 
     function initEls() {
-      ["fileInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","snapshotBtn"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","snapshotBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -828,6 +835,156 @@
       });
     }
 
+    function cleanupSongUrls() {
+      allSongs().forEach((song) => {
+        if (song?.url && typeof song.url === "string" && song.url.startsWith("blob:")) {
+          URL.revokeObjectURL(song.url);
+        }
+      });
+    }
+
+    function applyPlaylistMeta(playlist) {
+      if (!playlist) return;
+      if (playlist.title) $("titleInput").value = playlist.title;
+      if (playlist.name) $("authorInput").value = playlist.name;
+      if (playlist.club) $("clubInput").value = playlist.club;
+      if (playlist.place) $("placeInput").value = playlist.place;
+      if (playlist.date) $("dateInput").value = playlist.date;
+      if (playlist.time?.[0]) $("weekdayInput").value = playlist.time[0];
+      if (playlist.time?.[1]) $("timeInput").value = playlist.time[1];
+    }
+
+    function archiveEntrySortKey(entryName, index) {
+      const fileName = entryName.split("/").pop() || entryName;
+      const match = fileName.match(/^(\d+)/);
+      return match ? Number(match[1]) : index + 1000;
+    }
+
+    function normalizePath(path) {
+      return String(path || "").replace(/\\/g, "/").replace(/^\/+/, "");
+    }
+
+    function fileRelativePath(file) {
+      return normalizePath(file?.relativePath || file?.webkitRelativePath || file?.name || "");
+    }
+
+    function guessAudioMimeType(fileName) {
+      const lower = String(fileName || "").toLowerCase();
+      if (lower.endsWith(".mp3")) return "audio/mpeg";
+      if (lower.endsWith(".m4a")) return "audio/mp4";
+      if (lower.endsWith(".ogg")) return "audio/ogg";
+      if (lower.endsWith(".wma")) return "audio/x-ms-wma";
+      if (lower.endsWith(".flac")) return "audio/flac";
+      return "application/octet-stream";
+    }
+
+    function createPartTitleFromPath(relativePath) {
+      const segments = normalizePath(relativePath).split("/").filter(Boolean);
+      if (!segments.length) return "";
+      if (segments.length === 1) return "";
+      return segments[segments.length - 2] || "";
+    }
+
+    async function extractArchiveFiles(archiveFiles) {
+      if (typeof JSZip === "undefined") {
+        throw new Error("当前页面未加载压缩包解压模块");
+      }
+      const extracted = [];
+      for (const archiveFile of archiveFiles) {
+        const archiveBase = archiveFile.name.replace(/\.zip$/i, "") || "压缩包";
+        const zip = await JSZip.loadAsync(await archiveFile.arrayBuffer());
+        const entries = Object.values(zip.files)
+          .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
+          .sort((left, right) => {
+            const leftKey = archiveEntrySortKey(left.name, 0);
+            const rightKey = archiveEntrySortKey(right.name, 0);
+            if (leftKey !== rightKey) return leftKey - rightKey;
+            return left.name.localeCompare(right.name, "zh-CN", { numeric: true, sensitivity: "base" });
+          });
+        if (!entries.length) {
+          log(`${archiveFile.name} 中没有可导入的音频文件`);
+          continue;
+        }
+        for (const entry of entries) {
+          const blob = await entry.async("blob");
+          const fileName = entry.name.split("/").pop() || `song-${extracted.length + 1}.mp3`;
+          const file = new File([blob], fileName, {
+            type: blob.type || guessAudioMimeType(fileName),
+            lastModified: archiveFile.lastModified || Date.now()
+          });
+          file.relativePath = normalizePath(`${archiveBase}/${entry.name}`);
+          extracted.push(file);
+        }
+        log(`已在浏览器中解压 ${archiveFile.name}，得到 ${entries.length} 首舞曲`);
+      }
+      return extracted;
+    }
+
+    async function loadPlaylistArchive(playlist, archiveUrl, label) {
+      if (typeof JSZip === "undefined") {
+        throw new Error("当前页面未加载压缩包解压模块");
+      }
+      const response = await fetch(archiveUrl, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`${label}压缩包读取失败`);
+      }
+      const zip = await JSZip.loadAsync(await response.arrayBuffer());
+      const entries = Object.values(zip.files)
+        .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
+        .sort((left, right) => {
+          const keyDiff = archiveEntrySortKey(left.name, 0) - archiveEntrySortKey(right.name, 0);
+          if (keyDiff) return keyDiff;
+          return left.name.localeCompare(right.name, "zh-CN", { numeric: true, sensitivity: "base" });
+        });
+      if (!entries.length) {
+        throw new Error(`${label}压缩包中没有可导入的音频文件`);
+      }
+
+      cleanupSongUrls();
+      state.parts = [];
+      const tracks = Array.isArray(playlist?.tracks) ? playlist.tracks : [];
+      let currentPart = null;
+      let currentPartTitle = null;
+
+      for (let index = 0; index < entries.length; index += 1) {
+        const entry = entries[index];
+        const blob = await entry.async("blob");
+        const fileName = (entry.name.split("/").pop() || `sample-${index + 1}.mp3`).replace(/\\/g, "/");
+        const file = new File([blob], fileName, { type: blob.type || "audio/mpeg", lastModified: Date.now() });
+        const track = tracks[index] || null;
+        const partTitle = track?.part_title || "";
+        if (!currentPart || partTitle !== currentPartTitle) {
+          currentPartTitle = partTitle;
+          currentPart = { part_title: partTitle, music: [] };
+          state.parts.push(currentPart);
+        }
+
+        let song;
+        if (track && track.dance && track.title) {
+          song = buildCloudSong({
+            ...track,
+            source: track.source || file.name,
+          }, index);
+          song.file = file;
+          song.url = URL.createObjectURL(file);
+          song.duration = Number(track.duration || await audioDuration(file));
+          song.other = track.other || null;
+          song.choose = Boolean(track.choose);
+          song.speed = classifySpeed(song.dance);
+          song.dancetype = classifyDanceType(song.dance);
+        } else {
+          song = await parseSong(file, index);
+        }
+        currentPart.music.push(song);
+      }
+
+      applyPlaylistMeta(playlist);
+      renumber();
+      state.issues = [];
+      renderAll();
+      log(`已从压缩包导入${label} ${allSongs().length} 首`);
+    }
+
     async function parseSong(file, index) {
       const duration = await audioDuration(file);
       let name = file.name.replaceAll(" - ", "-").replaceAll("- ", "-").replaceAll(" -", "-").replaceAll("（", "(").replaceAll("）", ")").replaceAll("(1)", "").replaceAll("(2)", "");
@@ -870,7 +1027,7 @@
         other,
         speed: classifySpeed(dance),
         dancetype: classifyDanceType(dance),
-        source: file.webkitRelativePath || file.name,
+        source: fileRelativePath(file) || file.name,
         file,
         url: URL.createObjectURL(file),
       };
@@ -2150,19 +2307,29 @@
     }
 
     async function loadFiles() {
-      const files = [...els.fileInput.files].filter(file => /\.(mp3|wma|ogg|m4a|flac)$/i.test(file.name));
-      if (!files.length) {
-        log("没有可读取的音频文件");
+      const audioFiles = [...els.fileInput.files].filter(file => AUDIO_FILE_PATTERN.test(file.name));
+      const archiveFiles = [...els.archiveInput.files].filter(file => /\.zip$/i.test(file.name));
+      if (!audioFiles.length && !archiveFiles.length) {
+        log("没有可读取的音频文件或 ZIP 压缩包");
         return;
       }
+      const files = [...audioFiles];
+      if (archiveFiles.length) {
+        files.push(...await extractArchiveFiles(archiveFiles));
+      }
+      if (!files.length) {
+        log("没有可导入的舞曲文件");
+        return;
+      }
+      cleanupSongUrls();
       state.parts = [];
       let currentPart = null;
       let currentFolder = null;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const song = await parseSong(file, i);
-        const rel = file.webkitRelativePath || file.name;
-        const folder = rel.includes("/") ? rel.split("/").slice(-2, -1)[0] : "";
+        const rel = fileRelativePath(file) || file.name;
+        const folder = createPartTitleFromPath(rel);
         if (!currentPart || folder !== currentFolder) {
           currentFolder = folder;
           currentPart = { part_title: folder, music: [] };
@@ -2186,10 +2353,10 @@
       const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
       const playableTracks = tracks.filter(track => track.audio_url);
       if (!playableTracks.length) {
-        log("云端歌单暂未配置单曲直链，已为你打开前3首示例舞曲下载链接");
-        window.open(playlist.download_url || CLOUD_SAMPLE_URL, "_blank");
+        await loadPlaylistArchive(playlist, playlist.download_url || CLOUD_SAMPLE_URL, "前3首示范舞曲");
         return;
       }
+      cleanupSongUrls();
       state.parts = [];
       let currentPart = null;
       let currentPartTitle = null;
@@ -2202,13 +2369,7 @@
         }
         currentPart.music.push(buildCloudSong(track, index));
       });
-      if (playlist.title) $("titleInput").value = playlist.title;
-      if (playlist.name) $("authorInput").value = playlist.name;
-      if (playlist.club) $("clubInput").value = playlist.club;
-      if (playlist.place) $("placeInput").value = playlist.place;
-      if (playlist.date) $("dateInput").value = playlist.date;
-      if (playlist.time?.[0]) $("weekdayInput").value = playlist.time[0];
-      if (playlist.time?.[1]) $("timeInput").value = playlist.time[1];
+      applyPlaylistMeta(playlist);
       renumber();
       state.issues = [];
       renderAll();
@@ -2225,10 +2386,10 @@
       const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
       const playableTracks = tracks.filter(track => track.audio_url);
       if (!playableTracks.length) {
-        log("云端全部歌单暂未配置单曲直链，已为你打开全部示范舞曲下载链接");
-        window.open(playlist.download_url || CLOUD_FULL_URL, "_blank");
+        await loadPlaylistArchive(playlist, playlist.download_url || CLOUD_FULL_URL, "示范舞曲包");
         return;
       }
+      cleanupSongUrls();
       state.parts = [];
       let currentPart = null;
       let currentPartTitle = null;
@@ -2241,13 +2402,7 @@
         }
         currentPart.music.push(buildCloudSong(track, index));
       });
-      if (playlist.title) $("titleInput").value = playlist.title;
-      if (playlist.name) $("authorInput").value = playlist.name;
-      if (playlist.club) $("clubInput").value = playlist.club;
-      if (playlist.place) $("placeInput").value = playlist.place;
-      if (playlist.date) $("dateInput").value = playlist.date;
-      if (playlist.time?.[0]) $("weekdayInput").value = playlist.time[0];
-      if (playlist.time?.[1]) $("timeInput").value = playlist.time[1];
+      applyPlaylistMeta(playlist);
       renumber();
       state.issues = [];
       renderAll();
@@ -2281,15 +2436,15 @@
     function bindTopActions() {
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
-        log(`${err.message}，已打开示例舞曲下载链接`);
-        triggerDownload(CLOUD_SAMPLE_URL, "示范舞曲-top3.zip");
+        log(`${err.message}，已为你下载前3首示范舞曲压缩包`);
+        triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
       }));
-      $("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, "示范舞曲-top3.zip"));
+      $("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME));
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
-        log(`${err.message}，已打开全部示范舞曲下载链接`);
-        triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip");
+        log(`${err.message}，已为你下载示范舞曲压缩包`);
+        triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       }));
-      $("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, "示范舞曲.zip"));
+      $("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME));
       $("libraryBtn").addEventListener("click", () => {
         try {
           openLibraryView();
