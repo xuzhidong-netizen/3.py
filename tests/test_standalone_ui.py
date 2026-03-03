@@ -188,14 +188,11 @@ def test_cloud_full_load_uses_same_origin_assets_without_fetch_failure(browser, 
         page.close()
 
 
-def test_cloud_full_download_uses_streaming_track_fetcher() -> None:
+def test_cloud_full_download_prefers_prebuilt_release_zip() -> None:
     html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
 
-    assert "async function fetchBlobWithProgress" in html
-    assert 'fetchBlobWithProgress(track.audio_url, `第 ${trackNumber} 首原始舞曲`' in html
-    assert 'const buildTrackProgress = (payload, prefix = "正在下载原始舞曲") => {' in html
-    assert "trackRetries: 6" in html
-    assert "preferXhr: true" in html
+    assert 'const CLOUD_FULL_RELEASE_ZIP_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";' in html
+    assert 'triggerDownload(CLOUD_FULL_RELEASE_ZIP_URL, CLOUD_FULL_ARCHIVE_NAME);' in html
 
 
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
@@ -241,7 +238,7 @@ def test_library_and_recognizer_pages_render_core_controls(browser, static_serve
     pages = [
         (f"{static_server}/web_static/library.html", "#groupFilter"),
         (f"{static_server}/web_static/recognizer.html", "#searchInput"),
-        (f"{static_server}/web_static/full_sample_download.html", "#downloadAllBtn"),
+        (f"{static_server}/web_static/full_sample_download.html", "#downloadZipBtn"),
     ]
     for url, selector in pages:
         page = browser.new_page()
@@ -249,6 +246,8 @@ def test_library_and_recognizer_pages_render_core_controls(browser, static_serve
             page.goto(url)
             page.wait_for_selector(selector)
             assert page.locator("text=返回主页面").count() >= 1
+            if selector == "#downloadZipBtn":
+                assert page.locator("#downloadAllBtn").count() == 1
         finally:
             with contextlib.suppress(Exception):
                 page.close()

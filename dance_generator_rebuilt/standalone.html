@@ -1110,6 +1110,7 @@
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
+    const CLOUD_FULL_RELEASE_ZIP_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";
     const CLOUD_FULL_URL = "./web_static/full_sample_download.html";
     const CLOUD_FULL_ARCHIVE_NAME = "1.24.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
@@ -4389,23 +4390,9 @@
         triggerDownload(CLOUD_FULL_URL);
       }));
       $("downloadCloudFullBtn").addEventListener("click", () => {
-        downloadCloudPlaylistBundle({
-          progressLabel: "下载全部示范舞曲进度",
-          label: "下载全部示范舞曲",
-          playlistUrl: CLOUD_FULL_PLAYLIST_URL,
-          playlistErrorMessage: "云端全部歌单读取失败",
-          fallbackUrl: CLOUD_FULL_URL,
-          bundleName: CLOUD_FULL_ARCHIVE_NAME,
-          folderName: "1.24",
-          cacheMode: "default",
-          trackRetries: 6,
-          trackConnectTimeoutMs: 0,
-          trackStallTimeoutMs: 0,
-          preferXhr: true,
-        }).catch(err => {
-          log(`${err.message}，已为你打开全部示范舞曲原始文件下载页`);
-          triggerDownload(CLOUD_FULL_URL);
-        });
+        log(`正在打开 GitHub 预打包 ZIP：${CLOUD_FULL_ARCHIVE_NAME}`);
+        triggerDownload(CLOUD_FULL_RELEASE_ZIP_URL, CLOUD_FULL_ARCHIVE_NAME);
+        log(`已开始下载 ${CLOUD_FULL_ARCHIVE_NAME}`);
       });
       $("libraryBtn").addEventListener("click", () => {
         try {

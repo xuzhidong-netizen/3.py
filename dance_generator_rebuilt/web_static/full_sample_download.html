@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>全部示范舞曲原始文件下载</title>
+  <title>全部示范舞曲下载</title>
   <style>
     :root {
       --bg: #f6efe8;
@@ -130,17 +130,18 @@
   <main>
     <section class="card hero">
       <p>Original Full Sample Files</p>
-      <h1>全部示范舞曲原始文件下载</h1>
-      <p>这里直接列出当前上传到 GitHub 的 49 个原始音频文件。主页面里的“下载全部示范舞曲”会优先自动打包；如果浏览器内存或策略拦截，这一页可以作为稳定兜底。</p>
+      <h1>全部示范舞曲下载</h1>
+      <p>这里优先提供 GitHub Release 预打包好的 <code>1.24.zip</code>。主页面里的“下载全部示范舞曲”会直接下载这个 ZIP；如果你只想拿单个原始文件，下面仍然保留逐首下载列表。</p>
       <div class="actions">
         <a href="../standalone.html">返回主页面</a>
+        <a id="downloadZipBtn" href="https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip" download="1.24.zip">下载预打包 ZIP</a>
         <button id="downloadAllBtn" type="button">逐个下载全部原文件</button>
         <a class="secondary" href="./library.html">打开舞曲库</a>
         <a class="secondary" href="./recognizer.html">打开舞曲识别</a>
       </div>
       <div class="meta">
         <span id="countText">正在读取文件列表...</span>
-        <span>来源目录：<code>web_static/1.24</code></span>
+        <span>ZIP 来源：<code>GitHub Releases / v1.24-assets / 1.24.zip</code></span>
       </div>
       <div id="status"></div>
     </section>
@@ -195,6 +196,10 @@
       renderTracks(currentTracks);
     }).catch((error) => {
       document.getElementById("countText").textContent = error.message || String(error);
+    });
+
+    document.getElementById("downloadZipBtn").addEventListener("click", () => {
+      document.getElementById("status").textContent = "已开始下载 GitHub 预打包 ZIP。";
     });
 
     document.getElementById("downloadAllBtn").addEventListener("click", () => {
