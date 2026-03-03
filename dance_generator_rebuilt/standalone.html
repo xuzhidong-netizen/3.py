@@ -898,14 +898,6 @@
           <div class="import-drop">
             <div class="import-drop-head">
               <div class="import-drop-copy">
-                <strong>导入舞曲文件</strong>
-              </div>
-            </div>
-            <input id="fileInput" type="file" accept=".mp3,.wma,.ogg,.m4a,.flac,audio/mpeg,audio/x-ms-wma,audio/ogg,audio/mp4,audio/flac" multiple>
-          </div>
-          <div class="import-drop">
-            <div class="import-drop-head">
-              <div class="import-drop-copy">
                 <strong>导入 ZIP 压缩包</strong>
               </div>
             </div>
@@ -944,12 +936,12 @@
         </div>
         <div class="import-tips">
           <span class="import-tip">选中后自动读取</span>
-          <span class="import-tip">支持音频文件 / ZIP</span>
+          <span class="import-tip">支持 ZIP 压缩包</span>
           <span class="import-tip">只提取信息，不上传音频</span>
         </div>
         <details class="import-details">
           <summary>导入说明</summary>
-          <p>支持直接多选本地舞曲文件，也支持在浏览器内解压 ZIP 后导入。选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传原始音频文件。</p>
+          <p>支持在浏览器内解压 ZIP 后导入。选中压缩包后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传原始音频文件。</p>
         </details>
       </section>
 
@@ -1348,7 +1340,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn","fallbackModeBadge","fallbackStatus","fallbackTokenInput","saveFallbackTokenBtn","clearFallbackTokenBtn","loginFallbackGitHubBtn","openStaticFallbackBtn"].forEach(id => els[id] = $(id));
+      ["archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn","fallbackModeBadge","fallbackStatus","fallbackTokenInput","saveFallbackTokenBtn","clearFallbackTokenBtn","loginFallbackGitHubBtn","openStaticFallbackBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -4697,19 +4689,15 @@
 
     async function loadFiles() {
       const progress = createProgressLogger("读取舞曲进度");
-      const audioFiles = [...els.fileInput.files].filter(file => AUDIO_FILE_PATTERN.test(file.name));
       const archiveFiles = [...els.archiveInput.files].filter(file => /\.zip$/i.test(file.name));
-      if (!audioFiles.length && !archiveFiles.length) {
+      if (!archiveFiles.length) {
         progress.fail("没有可读取的文件");
-        log("没有可读取的音频文件或 ZIP 压缩包");
+        log("没有可读取的 ZIP 压缩包");
         return;
       }
       try {
-        progress.update(5, `已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`);
-        const files = [...audioFiles];
-        if (archiveFiles.length) {
-          files.push(...await extractArchiveFiles(archiveFiles, progress));
-        }
+        progress.update(5, `已选择 ZIP ${archiveFiles.length} 个`);
+        const files = await extractArchiveFiles(archiveFiles, progress);
         if (!files.length) {
           progress.fail("没有可导入的舞曲文件");
           log("没有可导入的舞曲文件");
@@ -4742,7 +4730,6 @@
         await yieldToBrowser();
         renderAll();
         log(`已读取 ${allSongs().length} 首舞曲`);
-        els.fileInput.value = "";
         els.archiveInput.value = "";
         await yieldToBrowser();
         await syncSongsToDanceLibrary("读取文件");
@@ -4754,9 +4741,8 @@
     }
 
     function scheduleAutoLoad(sourceLabel) {
-      const hasAudio = [...els.fileInput.files].some(file => AUDIO_FILE_PATTERN.test(file.name));
       const hasArchive = [...els.archiveInput.files].some(file => /\.zip$/i.test(file.name));
-      if (!hasAudio && !hasArchive) {
+      if (!hasArchive) {
         return;
       }
       if (autoLoadTimer) {
@@ -4858,7 +4844,6 @@
 
     function bindTopActions() {
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
-      els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲文件"));
       els.archiveInput.addEventListener("change", () => scheduleAutoLoad("ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已为你打开前3首示例舞曲下载链接`);

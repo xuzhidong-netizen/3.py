@@ -229,52 +229,52 @@ def test_cloud_full_download_prefers_prebuilt_release_zip() -> None:
     assert 'triggerDownload(CLOUD_FULL_RELEASE_ZIP_URL, CLOUD_FULL_ARCHIVE_NAME);' in html
 
 
-def test_directory_import_loads_local_folder(browser, static_server, import_dirs):
+def test_zip_import_loads_local_archive(browser, static_server):
     page = browser.new_page()
     try:
         page.goto(f"{static_server}/standalone.html")
-        files = [str(path) for path in sorted(import_dirs["small"].iterdir()) if path.is_file()]
-        page.locator("#fileInput").set_input_files(files)
-        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '24'")
+        page.locator("#archiveInput").set_input_files(str(TOP3_ZIP_PATH))
+        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '3'")
 
-        assert page.locator("#songsBody .song-row").count() == 20
+        assert page.locator("#songsBody .song-row").count() == 3
         logs = page.locator("#log .log-entry")
-        assert any("已读取 24 首舞曲" in logs.nth(index).inner_text() for index in range(logs.count()))
+        assert any("已在浏览器中解压 示范舞曲-top3.zip，得到 3 首舞曲" in logs.nth(index).inner_text() for index in range(logs.count()))
+        assert any("已读取 3 首舞曲" in logs.nth(index).inner_text() for index in range(logs.count()))
     finally:
         page.close()
 
 
-def test_large_directory_import_finishes_with_simple_flow(browser, static_server, import_dirs):
+def test_zip_import_finishes_with_simple_flow(browser, static_server):
     page = browser.new_page()
     try:
         page.goto(f"{static_server}/standalone.html")
-        files = [str(path) for path in sorted(import_dirs["large"].iterdir()) if path.is_file()]
-        page.locator("#fileInput").set_input_files(files)
-        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '160'", timeout=60000)
+        page.locator("#archiveInput").set_input_files(str(TOP3_ZIP_PATH))
+        page.wait_for_function("document.querySelector('#countStat') && document.querySelector('#countStat').textContent === '3'", timeout=60000)
 
-        assert page.locator("#songsBody .song-row").count() == 20
+        assert page.locator("#songsBody .song-row").count() == 3
         logs = page.locator("#log .log-entry")
         texts = [logs.nth(index).inner_text() for index in range(logs.count())]
-        assert any("已选择舞曲文件，开始自动读取舞曲" in text for text in texts)
-        assert any("已读取 160 首舞曲" in text for text in texts)
-        assert any("读取舞曲进度 100% · 已完成，共 160 首" in text for text in texts)
+        assert any("已选择ZIP 压缩包，开始自动读取舞曲" in text for text in texts)
+        assert any("已读取 3 首舞曲" in text for text in texts)
+        assert any("读取舞曲进度 95% · 正在写入舞曲表 3 首" in text for text in texts)
         assert not any("已启用大批量快速模式" in text for text in texts)
         assert not any("舞曲库同步将在后台继续" in text for text in texts)
     finally:
         page.close()
 
 
-def test_directory_import_reverts_to_simple_flow() -> None:
+def test_zip_import_only_flow() -> None:
     html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
 
     assert "async function loadFiles()" in html
     assert "async function yieldToBrowser()" in html
-    assert "已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个" in html
+    assert "已选择 ZIP ${archiveFiles.length} 个" in html
     assert "正在解析舞曲 ${i + 1}/${files.length} · ${currentName}" in html
     assert "if ((i + 1) % 5 === 0) {" in html
     assert "await syncSongsToDanceLibrary(\"读取文件\")" in html
     assert "async function extractArchiveFiles(archiveFiles, progress = null)" in html
     assert "if ((entryIndex + 1) % 10 === 0) {" in html
+    assert "fileInput" not in html
     assert "function createTaskGuard(label, progress = null, options = {})" not in html
     assert "function createImportRestartError(message = \"导入任务已由保护机制自动重启\")" not in html
     assert "function ensureImportRunActive(runId)" not in html
@@ -315,11 +315,10 @@ def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_s
         assert page.locator("#downloadCloudBtn").inner_text() == "下载前3首示例舞曲"
         assert page.locator("#loadCloudFullBtn").inner_text() == "加载云端全部示范舞曲"
         assert page.locator("#downloadCloudFullBtn").inner_text() == "下载全部示范舞曲"
-        assert page.locator("#fileInput").count() == 1
         assert page.locator("#archiveInput").count() == 1
-        assert page.locator("text=导入舞曲文件").count() == 1
+        assert page.locator("text=导入舞曲文件").count() == 0
         assert page.locator("text=导入舞曲目录").count() == 0
-        assert page.locator("#fileInput").get_attribute("accept") == ".mp3,.wma,.ogg,.m4a,.flac,audio/mpeg,audio/x-ms-wma,audio/ogg,audio/mp4,audio/flac"
+        assert page.locator("text=导入 ZIP 压缩包").count() == 1
         assert page.locator("#clearFileInputBtn").count() == 0
         assert page.locator("#clearArchiveInputBtn").count() == 0
         html = page.content()
