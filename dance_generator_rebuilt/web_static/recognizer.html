@@ -159,6 +159,59 @@
       display: grid;
       gap: 12px;
     }
+    .search-box {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      font: inherit;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+    }
+    .search-result-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .search-result-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 0;
+    }
+    .search-result-table th,
+    .search-result-table td {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    .search-result-table th {
+      width: 110px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .match-list {
+      display: grid;
+      gap: 10px;
+    }
+    .match-row {
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(207, 110, 51, 0.14);
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .match-row strong {
+      display: block;
+      font-size: 16px;
+    }
+    .match-row span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
     .item {
       padding: 16px 18px;
       border-radius: 20px;
@@ -273,6 +326,18 @@
       <section class="card">
         <div class="card-head">
           <div>
+            <p class="eyebrow">Song Search</p>
+            <h2>舞曲名搜索</h2>
+          </div>
+          <span>输入舞曲名或文件名后，会同时显示“文件名规则”解析结果和“舞曲库匹配结果”。适合在上传文件前先预判舞种。</span>
+        </div>
+        <input id="searchInput" class="search-box" type="search" placeholder="输入舞曲名或文件名，例如 并四-月亮惹的祸.mp3">
+        <div id="searchResults" class="empty">输入舞曲名或文件名后即可查看搜索结果。</div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
             <p class="eyebrow">Recognition Rules</p>
             <h2>识别说明</h2>
           </div>
@@ -316,6 +381,8 @@
       libraryCount: document.getElementById("libraryCount"),
       pendingCount: document.getElementById("pendingCount"),
       librarySongCount: document.getElementById("librarySongCount"),
+      searchInput: document.getElementById("searchInput"),
+      searchResults: document.getElementById("searchResults"),
       resultsWrap: document.getElementById("resultsWrap"),
     };
 
@@ -400,8 +467,74 @@
       </table>`;
     }
 
+    function renderSearchResults() {
+      const query = els.searchInput.value.trim();
+      if (!query) {
+        els.searchResults.className = "empty";
+        els.searchResults.innerHTML = "输入舞曲名或文件名后即可查看搜索结果。";
+        return;
+      }
+
+      const parsed = tools.parseSongFileName(query);
+      const filenameDance = parsed.dance || "";
+      const filenameGroup = tools.classifyDanceGroup(filenameDance);
+      const filenameStatus = filenameDance ? "命中文件名规则" : "当前输入未直接命中文件名规则";
+      const resolved = tools.resolveDanceFromLibrary(state.libraryData, parsed);
+      const libraryMatches = tools.queryLibrarySongs(state.libraryData, parsed.title || parsed.raw || parsed.stem || query).slice(0, 8);
+
+      let librarySummary = `<span class="badge is-muted">未命中</span>`;
+      if (resolved.dance) {
+        const modeText = resolved.mode === "exact" ? "舞曲库精确匹配" : "舞曲库近似匹配";
+        librarySummary = `<span class="badge">${tools.escapeHtml(resolved.dance)}</span> <span class="badge">${tools.escapeHtml(modeText)}</span>`;
+      } else if (resolved.ambiguous) {
+        librarySummary = `<span class="badge is-muted">命中多个舞种，待确认</span>`;
+      }
+
+      els.searchResults.className = "search-result-grid";
+      els.searchResults.innerHTML = `
+        <article class="item">
+          <strong>文件名规则</strong>
+          <table class="search-result-table">
+            <tbody>
+              <tr><th>输入内容</th><td>${tools.escapeHtml(query)}</td></tr>
+              <tr><th>提取舞曲名</th><td>${tools.escapeHtml(parsed.title || parsed.raw || parsed.stem || "-")}</td></tr>
+              <tr><th>舞种结果</th><td>${filenameDance ? `<span class="badge">${tools.escapeHtml(filenameDance)}</span>` : `<span class="badge is-muted">未识别</span>`}</td></tr>
+              <tr><th>分类结果</th><td>${filenameGroup ? `<span class="badge">${tools.escapeHtml(filenameGroup)}</span>` : `<span class="badge is-muted">待确认</span>`}</td></tr>
+              <tr><th>状态</th><td>${tools.escapeHtml(filenameStatus)}</td></tr>
+            </tbody>
+          </table>
+        </article>
+        <article class="item">
+          <strong>舞曲库匹配结果</strong>
+          <table class="search-result-table">
+            <tbody>
+              <tr><th>匹配结论</th><td>${librarySummary}</td></tr>
+              <tr><th>说明</th><td>${tools.escapeHtml(
+                resolved.dance
+                  ? `${resolved.mode === "exact" ? "舞曲库精确匹配" : "舞曲库近似匹配"}：${resolved.match?.title || ""}`
+                  : resolved.ambiguous
+                    ? "舞曲库里找到多个可能舞种，请人工确认。"
+                    : "舞曲库里没有找到对应舞曲。"
+              )}</td></tr>
+            </tbody>
+          </table>
+          ${libraryMatches.length ? `
+            <div class="match-list">
+              ${libraryMatches.map((song) => `
+                <div class="match-row">
+                  <strong>${tools.escapeHtml(song.title)}</strong>
+                  <span>舞种：${tools.escapeHtml(song.dance)}${tools.classifyDanceGroup(song.dance) ? ` · 分类：${tools.escapeHtml(tools.classifyDanceGroup(song.dance))}` : ""}</span>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<div class="empty">舞曲库里没有找到可展示的匹配结果。</div>`}
+        </article>
+      `;
+    }
+
     function renderAll() {
       renderStats();
+      renderSearchResults();
       renderResults();
     }
 
@@ -439,6 +572,10 @@
       els.recognizerInput.value = "";
       renderAll();
       setStatus("已清空识别结果。", "success");
+    });
+
+    els.searchInput.addEventListener("input", () => {
+      renderSearchResults();
     });
 
     if (state.syncChannel) {
