@@ -16,6 +16,11 @@
     branch: "main",
     path: "dance_generator_rebuilt/web_static/dance_library.json",
   };
+  const BACKEND_APP_ORIGINS = [
+    "http://ZhidongdeMac-mini.local:8000",
+    "http://127.0.0.1:8000",
+    "http://192.168.1.11:8000",
+  ];
   const REPO_URL = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}`;
   const CONTENTS_URL = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path.split("/").map(encodeURIComponent).join("/")}`;
   const RAW_URL = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${GITHUB.branch}/${GITHUB.path}`;
@@ -258,6 +263,55 @@
 
   function canUseBackendApi() {
     return /^https?:/i.test(String(global.location?.href || ""));
+  }
+
+  function isGitHubStaticPage() {
+    try {
+      const href = String(global.location?.href || "");
+      return /github\.io/i.test(new URL(href).hostname || "");
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function uniqueItems(items) {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = String(item || "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function getBackendAppOrigins() {
+    try {
+      const href = String(global.location?.href || "");
+      const currentUrl = href ? new URL(href) : null;
+      if (currentUrl && /^https?:/i.test(currentUrl.protocol) && !/github\.io/i.test(currentUrl.hostname || "")) {
+        return uniqueItems([currentUrl.origin, ...BACKEND_APP_ORIGINS]);
+      }
+    } catch (error) {
+    }
+    return uniqueItems(BACKEND_APP_ORIGINS);
+  }
+
+  function getBackendPageCandidates(relativePath = "/web_static/library.html") {
+    return getBackendAppOrigins().map((origin) => new URL(relativePath, `${origin}/`).toString());
+  }
+
+  function getPreferredBackendPageUrl(relativePath = "/web_static/library.html") {
+    return getBackendPageCandidates(relativePath)[0] || "";
+  }
+
+  function buildNoBackendTokenMessage() {
+    const backendPageUrl = getPreferredBackendPageUrl("/web_static/library.html");
+    if (isGitHubStaticPage()) {
+      return backendPageUrl
+        ? `你当前打开的是 GitHub Pages 静态页。浏览器不能从这个 HTTPS 页面直接调用本机 HTTP 后端，所以不会使用后端里的 GitHub Token。请改为打开本机服务版舞曲库：${backendPageUrl}；如果继续停留在静态页，则需要先在当前浏览器保存 GitHub Token。`
+        : "你当前打开的是 GitHub Pages 静态页。浏览器不能从这个 HTTPS 页面直接调用本机 HTTP 后端，因此不会使用后端里的 GitHub Token。请改为打开本机服务版页面，或先在当前浏览器保存 GitHub Token。";
+    }
+    return "当前页面未连接可用后端服务器，且当前浏览器未保存 GitHub Token。";
   }
 
   function getBackendLibraryUrl() {
@@ -786,7 +840,7 @@
       if (backendError?.status && backendError.status >= 500) {
         throw backendError;
       }
-      throw new Error("当前页面未连接可用后端服务器，且当前浏览器未保存 GitHub Token。");
+      throw new Error(buildNoBackendTokenMessage());
     }
 
     const result = await saveLibraryDataToGitHub(data);
@@ -820,6 +874,8 @@
     entryKey,
     escapeHtml,
     getBackendLibraryUrl,
+    getBackendPageCandidates,
+    getPreferredBackendPageUrl,
     getGitHubToken,
     loadLibraryData,
     loadLibraryDataFromBackend,

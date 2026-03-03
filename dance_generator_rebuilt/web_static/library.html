@@ -451,6 +451,7 @@
             <input id="tokenInput" type="password" placeholder="推荐保存到当前浏览器，供 GitHub 静态页直接使用">
           </div>
           <div class="settings-actions">
+            <button id="openBackendBtn" type="button">打开本机服务版</button>
             <button id="loginGitHubBtn" type="button">GitHub 登录</button>
             <button id="checkTokenBtn" type="button">检测令牌</button>
             <button id="saveTokenBtn" type="button">保存令牌</button>
@@ -534,6 +535,7 @@
       saveBtn: document.getElementById("saveBtn"),
       refreshBtn: document.getElementById("refreshBtn"),
       tokenInput: document.getElementById("tokenInput"),
+      openBackendBtn: document.getElementById("openBackendBtn"),
       loginGitHubBtn: document.getElementById("loginGitHubBtn"),
       checkTokenBtn: document.getElementById("checkTokenBtn"),
       saveTokenBtn: document.getElementById("saveTokenBtn"),
@@ -611,6 +613,21 @@
       els.tokenState.textContent = tools.getGitHubToken()
         ? "当前浏览器已保存 GitHub Token（后端暂不可用时可直接启用静态兜底）"
         : "建议填写 GitHub Token，供后端不可用时启用静态兜底";
+    }
+
+    function openBackendLibraryPage() {
+      const targetUrl = tools.getPreferredBackendPageUrl("/web_static/library.html");
+      if (!targetUrl) {
+        setStatus("当前没有可用的本机服务地址。", "error");
+        return;
+      }
+      const popup = window.open(targetUrl, "_blank");
+      if (!popup) {
+        setStatus("浏览器拦截了本机服务页面弹窗，请允许弹窗后重试。", "error");
+        return;
+      }
+      popup.focus();
+      setStatus(`已打开本机服务版舞曲库：${targetUrl}`, "success");
     }
 
     function renderStats() {
@@ -895,6 +912,10 @@
 
     els.saveBtn.addEventListener("click", () => {
       savePendingEntries();
+    });
+
+    els.openBackendBtn.addEventListener("click", () => {
+      openBackendLibraryPage();
     });
 
     els.saveTokenBtn.addEventListener("click", () => {

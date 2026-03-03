@@ -353,3 +353,23 @@ test("inspectGitHubToken reports classic token repo scope problems", async () =>
   assert.equal(result.code, "classic_scope_missing");
   assert.match(result.message, /缺少 repo scope/);
 });
+
+test("saveLibraryData explains github pages cannot directly use local backend token", async () => {
+  const tools = loadTools({
+    location: {
+      href: "https://xuzhidong-netizen.github.io/3.py/dance_generator_rebuilt/web_static/library.html",
+    },
+    fetch: async () => mockJsonResponse(404, {
+      error: "Not Found",
+    }),
+  });
+
+  await assert.rejects(
+    () => tools.saveLibraryData({
+      version: 1,
+      updated_at: "2026-03-04T10:00:00Z",
+      songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-04T10:00:00Z" }],
+    }),
+    /GitHub Pages 静态页/,
+  );
+});
