@@ -939,7 +939,7 @@
       <section class="card">
         <div class="section-head">
           <h2>舞曲表</h2>
-          <span>拖拽舞曲行可调整顺序，点击舞曲可播放</span>
+          <span>拖拽舞曲行可调整顺序，点击舞曲可播放 / 暂停</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -1856,7 +1856,7 @@
         row.addEventListener("click", event => {
           if (event.target.closest("button") || event.target.closest("input")) return;
           const index = Number(row.dataset.num) - 1;
-          playSongAtIndex(index, false);
+          toggleSongPlayback(index);
         });
         row.querySelector(".replace-row").addEventListener("click", () => {
           const songId = row.dataset.songId;
@@ -1912,6 +1912,29 @@
       els.player.src = song.url;
       els.player.play().catch(() => {});
       log(`正在播放 ${String(song.num).padStart(2,"0")} ${song.dance}-${song.title}`);
+      updatePlayingRow();
+    }
+
+    function toggleSongPlayback(index) {
+      const songs = allSongs();
+      if (!songs.length) {
+        log("当前没有可播放的舞曲");
+        return;
+      }
+      const normalizedIndex = ((index % songs.length) + songs.length) % songs.length;
+      const song = songs[normalizedIndex];
+      const isCurrentSong = state.currentSong?.id === song.id && state.currentAudioIndex === normalizedIndex;
+      if (!isCurrentSong || !els.player.src) {
+        playSongAtIndex(normalizedIndex, false);
+        return;
+      }
+      if (els.player.paused) {
+        els.player.play().catch(() => {});
+        log(`继续播放 ${String(song.num).padStart(2,"0")} ${song.dance}-${song.title}`);
+      } else {
+        els.player.pause();
+        log(`已暂停 ${String(song.num).padStart(2,"0")} ${song.dance}-${song.title}`);
+      }
       updatePlayingRow();
     }
 
