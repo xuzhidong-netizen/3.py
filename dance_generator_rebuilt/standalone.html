@@ -240,6 +240,47 @@
       flex: 0 0 auto;
     }
 
+    .import-tips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .import-tip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(29, 35, 31, 0.08);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .import-details {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(29, 35, 31, 0.08);
+      background: rgba(255,255,255,0.42);
+    }
+
+    .import-details summary {
+      cursor: pointer;
+      color: var(--accent-dark);
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .import-details p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
     .control-sections {
       display: grid;
       gap: 14px;
@@ -272,11 +313,6 @@
 
     .control-buttons button {
       flex: 1 1 180px;
-    }
-
-    .import-note {
-      margin-top: 14px;
-      line-height: 1.7;
     }
 
     #libraryBtn {
@@ -751,7 +787,7 @@
             <div class="import-drop-head">
               <div class="import-drop-copy">
                 <strong>导入舞曲目录</strong>
-                <span>直接选择本地文件夹，保留目录结构并自动按目录归类分场。</span>
+                <span>整目录批量导入，按目录自动分场。</span>
               </div>
               <button id="clearFileInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
@@ -761,7 +797,7 @@
             <div class="import-drop-head">
               <div class="import-drop-copy">
                 <strong>导入 ZIP 压缩包</strong>
-                <span>在浏览器内解压后导入，只提取可用音频文件，不保留原始压缩包。</span>
+                <span>浏览器内解压 ZIP，只导入音频。</span>
               </div>
               <button id="clearArchiveInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
@@ -825,7 +861,15 @@
             </div>
           </div>
         </div>
-        <p class="hint import-note">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传本地音频文件。</p>
+        <div class="import-tips">
+          <span class="import-tip">选中后自动读取</span>
+          <span class="import-tip">支持目录 / ZIP</span>
+          <span class="import-tip">只提取信息，不上传音频</span>
+        </div>
+        <details class="import-details">
+          <summary>导入说明</summary>
+          <p>支持直接导入本地舞曲目录，也支持在浏览器内解压 ZIP 后导入。选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传原始音频文件。</p>
+        </details>
       </section>
 
       <section class="card">
