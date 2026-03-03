@@ -383,6 +383,7 @@ async def save_library(request: Request) -> JSONResponse:
         if not data.get("songs"):
             return JSONResponse({"ok": False, "error": "舞曲库没有可保存的数据。"}, status_code=400)
         commit_url = sync_library_data_to_github(data)
+        write_library_data(data)
         return JSONResponse({"ok": True, "data": data, "commit_url": commit_url, "source": "backend"})
     except Exception as exc:
         status_code = 503 if LIBRARY_GITHUB_TOKEN_ENV in str(exc) else 500

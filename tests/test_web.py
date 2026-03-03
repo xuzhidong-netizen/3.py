@@ -144,7 +144,7 @@ def test_library_get_prefers_github_when_backend_token_exists(tmp_path, monkeypa
     assert payload["data"]["songs"][0]["title"] == "GitHub主源"
 
 
-def test_library_post_syncs_github_without_writing_local_cache(tmp_path, monkeypatch):
+def test_library_post_updates_local_cache_for_github_fallback(tmp_path, monkeypatch):
     client, library_path = create_client(tmp_path, monkeypatch)
     monkeypatch.setattr(web, "sync_library_data_to_github", lambda data: "https://example.com/commit/1")
 
@@ -163,7 +163,18 @@ def test_library_post_syncs_github_without_writing_local_cache(tmp_path, monkeyp
 
     assert response.status_code == 200
     assert response.json()["commit_url"] == "https://example.com/commit/1"
-    assert not library_path.exists()
+    saved = json.loads(library_path.read_text(encoding="utf-8"))
+    assert saved["songs"][0]["title"] == "夜来香"
+
+    monkeypatch.setenv("DANCE_LIBRARY_GITHUB_TOKEN", "github_pat_test")
+    monkeypatch.setattr(web, "read_library_data_from_github", lambda: (_ for _ in ()).throw(RuntimeError("GitHub unavailable")))
+
+    fallback_response = client.get("/api/library")
+
+    assert fallback_response.status_code == 200
+    fallback_payload = fallback_response.json()
+    assert fallback_payload["data"]["songs"][0]["title"] == "夜来香"
+    assert "warning" in fallback_payload
 
 
 def test_library_get_falls_back_to_local_cache_when_github_read_fails(tmp_path, monkeypatch):
