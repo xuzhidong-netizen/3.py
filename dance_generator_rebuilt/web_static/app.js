@@ -414,9 +414,7 @@ function startSequencePlayback() {
 function wireButtons() {
   document.getElementById("loadBtn").addEventListener("click", () => handleLoad().catch((error) => log(error.message)));
   document.getElementById("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch((error) => log(error.message)));
-  document.getElementById("downloadCloudBtn").addEventListener("click", () => triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME));
   document.getElementById("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch((error) => log(error.message)));
-  document.getElementById("downloadCloudFullBtn").addEventListener("click", () => triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME));
   document.getElementById("syncBtn").addEventListener("click", () => refreshState().then(() => log("列表已更新")).catch((error) => log(error.message)));
   document.getElementById("checkBtn").addEventListener("click", () => handleCheck().catch((error) => log(error.message)));
   document.getElementById("exportBtn").addEventListener("click", () => handleExport().catch((error) => log(error.message)));

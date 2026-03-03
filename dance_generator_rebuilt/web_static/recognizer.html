@@ -73,20 +73,29 @@
       flex-wrap: wrap;
       gap: 12px;
     }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
     .actions label,
-    .actions button {
+    .actions button,
+    .hero-actions a {
       border: 0;
       border-radius: 999px;
       padding: 14px 18px;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
+      text-decoration: none;
     }
     .actions label {
       background: linear-gradient(135deg, #cf6e33, #e5a57c);
       color: white;
     }
-    .actions button {
+    .actions button,
+    .hero-actions a {
       background: rgba(255, 255, 255, 0.92);
       color: var(--ink);
       border: 1px solid var(--line);
@@ -227,6 +236,9 @@
         <p class="eyebrow">Dance Recognition</p>
         <h1>舞曲识别</h1>
         <p>识别顺序是“文件名规则优先，舞曲库回查兜底”。如果文件名没有直接写出舞种，页面会用提取到的舞曲名去查询舞曲库，并返回对应舞种。</p>
+      </div>
+      <div class="hero-actions">
+        <a href="../standalone.html">返回主页面</a>
       </div>
       <div class="actions">
         <label for="recognizerInput">上传文件

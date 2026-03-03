@@ -85,6 +85,12 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
     }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
     .stat {
       padding: 18px;
       border-radius: 20px;
@@ -141,20 +147,23 @@
     }
     .actions label,
     .actions button,
-    .settings button {
+    .settings button,
+    .hero-actions a {
       border: 0;
       border-radius: 999px;
       padding: 14px 18px;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
+      text-decoration: none;
     }
     .actions label {
       background: linear-gradient(135deg, #cf6e33, #e5a57c);
       color: white;
     }
     .actions button,
-    .settings button {
+    .settings button,
+    .hero-actions a {
       background: rgba(255, 255, 255, 0.92);
       color: var(--ink);
       border: 1px solid var(--line);
@@ -265,6 +274,9 @@
         <p class="eyebrow">Dance Library</p>
         <h1>舞曲库</h1>
         <p>上传舞曲文件后，页面只提取舞种和舞曲名，不保存原始音频。保存后会把舞曲库数据写回 <code>3.py</code> 仓库中的 <code>dance_library.json</code>，舞曲识别页会直接复用这些数据。</p>
+      </div>
+      <div class="hero-actions">
+        <a href="../standalone.html">返回主页面</a>
       </div>
       <div class="hero-stats">
         <article class="stat"><strong id="songCount">0</strong><span>已收录舞曲</span></article>

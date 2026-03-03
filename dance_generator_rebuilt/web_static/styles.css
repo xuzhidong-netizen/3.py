@@ -70,6 +70,18 @@ select {
   color: var(--muted);
 }
 
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .card {
   background: rgba(255, 250, 242, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.6);
