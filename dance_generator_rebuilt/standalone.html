@@ -787,7 +787,6 @@
             <div class="control-buttons">
               <button id="downloadTxtBtn">导出 TXT</button>
               <button id="downloadHtmlBtn">打开大屏页面</button>
-              <button id="snapshotBtn">打开快照大屏</button>
             </div>
           </div>
         </div>
@@ -887,14 +886,14 @@
       <section class="preview-grid">
         <section class="card snapshot-card">
           <div class="section-head">
-            <h2>页面快照</h2>
-            <span id="snapshotCaption">未生成</span>
+            <h2>大屏状态</h2>
+            <span id="snapshotCaption">未打开</span>
           </div>
           <div class="snapshot-stage" id="snapshotStage">
             <div class="snapshot-placeholder" id="snapshotPlaceholder">
               <div>
-                <strong>舞曲舞台预览</strong>
-                <span>点击按钮后会直接打开一个带动效的大屏展示页，并同步当前正在播放的舞曲。</span>
+                <strong>舞曲大屏展示</strong>
+                <span>点击“打开大屏页面”后会直接打开动态大屏，并且可以在大屏里切换 6 套不同风格。</span>
               </div>
             </div>
             <img id="preview" alt="snapshot">
@@ -908,7 +907,7 @@
           <ul class="clean">
             <li>TXT 和 HTML 直接下载到浏览器默认目录。</li>
             <li>音频读取依赖浏览器选择的本地文件，不会上传。</li>
-            <li>页面快照使用浏览器 `SVG foreignObject` 方式生成，兼容性取决于内核。</li>
+            <li>大屏页面支持风格调整，可在默认风格之外切换 5 套动态主题。</li>
           </ul>
         </section>
       </section>
@@ -981,7 +980,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","snapshotBtn"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -1838,6 +1837,14 @@
     function buildStageHtml(payload) {
       const payloadJson = JSON.stringify(payload).replace(/</g, "\\u003c");
       const mainPageUrl = JSON.stringify(new URL("./standalone.html", window.location.href).toString());
+      const themeJson = JSON.stringify([
+        { id: "default", label: "默认风格", note: "暖金舞会" },
+        { id: "aurora", label: "极光流彩", note: "青绿流光" },
+        { id: "velvet", label: "绒幕夜宴", note: "酒红铜金" },
+        { id: "sapphire", label: "蓝调星幕", note: "深海霓光" },
+        { id: "jade", label: "玉影华庭", note: "翡翠金边" },
+        { id: "sunrise", label: "晨曦云幕", note: "日出粉橙" }
+      ]).replace(/</g, "\\u003c");
       return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1846,26 +1853,162 @@
   <title>${payload.meta.title || "舞会大屏"}</title>
   <style>
     :root {
-      --bg: #140f0d;
+      --bg-top: #1b1410;
+      --bg-bottom: #120d0a;
+      --glow-a: rgba(255, 142, 73, 0.34);
+      --glow-b: rgba(109, 156, 124, 0.22);
+      --glow-c: rgba(255, 212, 170, 0.12);
       --panel: rgba(30, 22, 17, 0.82);
+      --panel-strong: rgba(36, 26, 20, 0.9);
       --panel-soft: rgba(255, 245, 236, 0.08);
       --ink: #fff7ef;
       --muted: rgba(255, 247, 239, 0.7);
       --accent: #ff8e49;
+      --accent-strong: #ffbb90;
       --accent-soft: rgba(255, 142, 73, 0.18);
+      --button-a: rgba(255, 142, 73, 0.92);
+      --button-b: rgba(255, 196, 153, 0.9);
+      --chip-border: rgba(255, 142, 73, 0.26);
+      --section-top: rgba(30, 22, 17, 0.92);
+      --section-bottom: rgba(26, 18, 14, 0.84);
+      --playing-a: rgba(255, 142, 73, 0.24);
+      --playing-b: rgba(255, 142, 73, 0.06);
       --line: rgba(255,255,255,0.1);
       --glow: 0 30px 80px rgba(0,0,0,0.28);
+      --theme-card: rgba(255,255,255,0.04);
+      --theme-card-active: rgba(255,255,255,0.1);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       color: var(--ink);
+      position: relative;
+      overflow-x: hidden;
       font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
+      background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      transition: background 400ms ease, color 240ms ease;
+    }
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -16vh -10vw;
+      pointer-events: none;
+      z-index: 0;
       background:
-        radial-gradient(circle at top left, rgba(255, 142, 73, 0.32), transparent 24%),
-        radial-gradient(circle at 80% 20%, rgba(109, 156, 124, 0.2), transparent 20%),
-        linear-gradient(180deg, #1b1410 0%, #120d0a 100%);
+        radial-gradient(circle at 18% 22%, var(--glow-a), transparent 26%),
+        radial-gradient(circle at 78% 18%, var(--glow-b), transparent 22%),
+        radial-gradient(circle at 52% 78%, var(--glow-c), transparent 24%);
+      animation: stageAura 18s ease-in-out infinite alternate;
+      filter: blur(10px);
+      opacity: 0.96;
+    }
+    body::after {
+      inset: -20vh -14vw;
+      opacity: 0.58;
+      animation-duration: 24s;
+      animation-direction: alternate-reverse;
+      mix-blend-mode: screen;
+    }
+    body[data-theme="aurora"] {
+      --bg-top: #071a1c;
+      --bg-bottom: #041012;
+      --glow-a: rgba(54, 227, 200, 0.34);
+      --glow-b: rgba(168, 255, 120, 0.22);
+      --glow-c: rgba(154, 245, 226, 0.14);
+      --panel: rgba(8, 28, 30, 0.82);
+      --panel-strong: rgba(10, 34, 36, 0.92);
+      --accent: #53e3cb;
+      --accent-strong: #baf7ef;
+      --accent-soft: rgba(83, 227, 203, 0.16);
+      --button-a: rgba(83, 227, 203, 0.94);
+      --button-b: rgba(180, 255, 233, 0.9);
+      --chip-border: rgba(83, 227, 203, 0.24);
+      --section-top: rgba(8, 28, 30, 0.92);
+      --section-bottom: rgba(6, 21, 24, 0.86);
+      --playing-a: rgba(83, 227, 203, 0.22);
+      --playing-b: rgba(83, 227, 203, 0.06);
+    }
+    body[data-theme="velvet"] {
+      --bg-top: #231014;
+      --bg-bottom: #12080b;
+      --glow-a: rgba(242, 114, 135, 0.32);
+      --glow-b: rgba(255, 186, 120, 0.2);
+      --glow-c: rgba(255, 224, 202, 0.12);
+      --panel: rgba(43, 17, 25, 0.82);
+      --panel-strong: rgba(52, 20, 29, 0.92);
+      --accent: #f27287;
+      --accent-strong: #ffd1d9;
+      --accent-soft: rgba(242, 114, 135, 0.16);
+      --button-a: rgba(242, 114, 135, 0.94);
+      --button-b: rgba(255, 196, 164, 0.88);
+      --chip-border: rgba(242, 114, 135, 0.24);
+      --section-top: rgba(43, 17, 25, 0.92);
+      --section-bottom: rgba(33, 14, 20, 0.84);
+      --playing-a: rgba(242, 114, 135, 0.22);
+      --playing-b: rgba(242, 114, 135, 0.06);
+    }
+    body[data-theme="sapphire"] {
+      --bg-top: #071522;
+      --bg-bottom: #040d16;
+      --glow-a: rgba(88, 159, 255, 0.34);
+      --glow-b: rgba(82, 222, 255, 0.22);
+      --glow-c: rgba(193, 236, 255, 0.1);
+      --panel: rgba(10, 24, 40, 0.82);
+      --panel-strong: rgba(11, 29, 47, 0.92);
+      --accent: #69b5ff;
+      --accent-strong: #cbe7ff;
+      --accent-soft: rgba(105, 181, 255, 0.16);
+      --button-a: rgba(105, 181, 255, 0.94);
+      --button-b: rgba(171, 227, 255, 0.9);
+      --chip-border: rgba(105, 181, 255, 0.22);
+      --section-top: rgba(10, 24, 40, 0.92);
+      --section-bottom: rgba(8, 18, 30, 0.84);
+      --playing-a: rgba(105, 181, 255, 0.22);
+      --playing-b: rgba(105, 181, 255, 0.06);
+    }
+    body[data-theme="jade"] {
+      --bg-top: #081610;
+      --bg-bottom: #040d09;
+      --glow-a: rgba(61, 196, 126, 0.32);
+      --glow-b: rgba(226, 201, 108, 0.22);
+      --glow-c: rgba(197, 255, 224, 0.12);
+      --panel: rgba(13, 31, 21, 0.82);
+      --panel-strong: rgba(16, 38, 26, 0.92);
+      --accent: #4fd18c;
+      --accent-strong: #d7f8e6;
+      --accent-soft: rgba(79, 209, 140, 0.16);
+      --button-a: rgba(79, 209, 140, 0.94);
+      --button-b: rgba(229, 212, 127, 0.9);
+      --chip-border: rgba(79, 209, 140, 0.22);
+      --section-top: rgba(13, 31, 21, 0.92);
+      --section-bottom: rgba(10, 24, 17, 0.84);
+      --playing-a: rgba(79, 209, 140, 0.22);
+      --playing-b: rgba(79, 209, 140, 0.06);
+    }
+    body[data-theme="sunrise"] {
+      --bg-top: #261514;
+      --bg-bottom: #140c0d;
+      --glow-a: rgba(255, 151, 117, 0.34);
+      --glow-b: rgba(255, 211, 119, 0.24);
+      --glow-c: rgba(255, 206, 220, 0.14);
+      --panel: rgba(48, 28, 26, 0.8);
+      --panel-strong: rgba(58, 34, 31, 0.9);
+      --accent: #ff9775;
+      --accent-strong: #ffe0d5;
+      --accent-soft: rgba(255, 151, 117, 0.16);
+      --button-a: rgba(255, 151, 117, 0.94);
+      --button-b: rgba(255, 215, 145, 0.92);
+      --chip-border: rgba(255, 151, 117, 0.22);
+      --section-top: rgba(48, 28, 26, 0.92);
+      --section-bottom: rgba(37, 22, 20, 0.84);
+      --playing-a: rgba(255, 151, 117, 0.22);
+      --playing-b: rgba(255, 151, 117, 0.06);
+    }
+    #app {
+      position: relative;
+      z-index: 1;
     }
     .stage-shell {
       padding: 32px;
@@ -1878,7 +2021,7 @@
       gap: 24px;
       align-items: stretch;
     }
-    .stage-copy, .stage-now, .stage-section {
+    .stage-copy, .stage-now, .stage-section, .theme-panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 28px;
@@ -1889,6 +2032,7 @@
       padding: 28px;
       position: relative;
       overflow: hidden;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel));
     }
     .stage-copy::after, .stage-now::after {
       content: "";
@@ -1903,7 +2047,7 @@
       margin: 0 0 10px;
       text-transform: uppercase;
       letter-spacing: 0.16em;
-      color: #ffbb90;
+      color: var(--accent-strong);
       font-size: 12px;
       font-weight: 700;
     }
@@ -1921,9 +2065,10 @@
       align-content: center;
       gap: 14px;
       overflow: hidden;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel));
     }
     .stage-now.is-live {
-      box-shadow: 0 0 0 1px rgba(255,142,73,0.2), 0 30px 80px rgba(0,0,0,0.28);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent), 0 30px 80px rgba(0,0,0,0.28);
     }
     .stage-now.is-live::before {
       content: "";
@@ -1933,13 +2078,13 @@
       width: 12px;
       height: 12px;
       border-radius: 999px;
-      background: #ff8e49;
-      box-shadow: 0 0 0 0 rgba(255, 142, 73, 0.52);
+      background: var(--accent);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 52%, transparent);
       animation: livePulse 1.6s ease-out infinite;
     }
     .stage-now-label {
       padding-left: 24px;
-      color: #ffbb90;
+      color: var(--accent-strong);
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-size: 12px;
@@ -1960,10 +2105,10 @@
       border-top: 1px solid rgba(255,255,255,0.08);
       display: grid;
       gap: 6px;
-      color: #ffd8bf;
+      color: color-mix(in srgb, var(--ink) 88%, var(--accent) 12%);
     }
     .stage-next span {
-      color: #ffbb90;
+      color: var(--accent-strong);
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.12em;
@@ -1975,7 +2120,7 @@
     }
     .stage-controls {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 14px;
     }
     .stage-controls button {
@@ -1985,21 +2130,83 @@
       color: var(--ink);
       font: inherit;
       font-weight: 700;
-      background: linear-gradient(135deg, rgba(255, 142, 73, 0.9), rgba(255, 196, 153, 0.88));
+      background: linear-gradient(135deg, var(--button-a), var(--button-b));
       box-shadow: 0 16px 30px rgba(0,0,0,0.18);
       cursor: pointer;
-      transition: transform 160ms ease, box-shadow 160ms ease;
+      transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
     }
     .stage-controls button:hover {
       transform: translateY(-2px);
       box-shadow: 0 22px 36px rgba(0,0,0,0.22);
+      filter: saturate(1.05);
+    }
+    .theme-panel {
+      display: none;
+      gap: 14px;
+      padding: 20px;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+      animation: panelLift 260ms ease forwards;
+    }
+    .theme-panel.is-open {
+      display: grid;
+    }
+    .theme-panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .theme-panel-head strong {
+      font-size: 18px;
+    }
+    .theme-panel-head span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .theme-option {
+      display: grid;
+      gap: 6px;
+      min-height: 98px;
+      padding: 16px;
+      text-align: left;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(160deg, var(--theme-card-active), var(--theme-card)),
+        linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent 60%);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+    .theme-option strong {
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .theme-option span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .theme-option.is-active {
+      border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+      box-shadow: 0 18px 28px rgba(0,0,0,0.16);
+      transform: translateY(-2px);
+    }
+    .theme-option:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 26px rgba(0,0,0,0.14);
     }
     .stage-chip {
       padding: 10px 16px;
       border-radius: 999px;
       background: var(--accent-soft);
-      border: 1px solid rgba(255, 142, 73, 0.26);
-      color: #ffd8bf;
+      border: 1px solid var(--chip-border);
+      color: color-mix(in srgb, var(--ink) 90%, var(--accent) 10%);
     }
     .stage-board {
       display: grid;
@@ -2008,7 +2215,7 @@
     .stage-section {
       padding: 20px;
       animation: sectionLift 480ms ease both;
-      background: linear-gradient(180deg, rgba(30, 22, 17, 0.92), rgba(26, 18, 14, 0.84));
+      background: linear-gradient(180deg, var(--section-top), var(--section-bottom));
     }
     .stage-section-head {
       display: flex;
@@ -2032,7 +2239,7 @@
       border-bottom: 1px solid var(--line);
     }
     .stage-table th {
-      color: #ffbb90;
+      color: var(--accent-strong);
       font-size: 13px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -2044,8 +2251,8 @@
       cursor: pointer;
     }
     .stage-table tbody tr.is-playing {
-      background: linear-gradient(90deg, rgba(255,142,73,0.22), rgba(255,142,73,0.06));
-      box-shadow: inset 6px 0 0 #ff8e49;
+      background: linear-gradient(90deg, var(--playing-a), var(--playing-b));
+      box-shadow: inset 6px 0 0 var(--accent);
       transform: translateX(4px);
     }
     .stage-empty {
@@ -2057,26 +2264,36 @@
       border: 1px solid var(--line);
     }
     @keyframes livePulse {
-      0% { box-shadow: 0 0 0 0 rgba(255, 142, 73, 0.52); }
-      70% { box-shadow: 0 0 0 16px rgba(255, 142, 73, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(255, 142, 73, 0); }
+      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 52%, transparent); }
+      70% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--accent) 0%, transparent); }
+      100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
     }
     @keyframes stageSweep {
       from { transform: translateX(-140%); }
       to { transform: translateX(160%); }
     }
+    @keyframes stageAura {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(4vw, -2vh, 0) scale(1.08); }
+    }
     @keyframes sectionLift {
       from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes panelLift {
+      from { opacity: 0; transform: translateY(12px); }
       to { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 900px) {
       .stage-shell { padding: 18px; }
       .stage-hero { grid-template-columns: 1fr; }
       .stage-controls { grid-template-columns: 1fr 1fr; }
+      .theme-grid { grid-template-columns: 1fr 1fr; }
       .stage-table { min-width: 720px; display: block; overflow-x: auto; }
     }
     @media (max-width: 640px) {
       .stage-controls { grid-template-columns: 1fr; }
+      .theme-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -2085,18 +2302,56 @@
   <script>
     const initialPayload = ${payloadJson};
     const mainPageUrl = ${mainPageUrl};
+    const stageThemes = ${themeJson};
     const channel = "BroadcastChannel" in window ? new BroadcastChannel("dance-stage") : null;
     const controlChannel = "BroadcastChannel" in window ? new BroadcastChannel("dance-stage-control") : null;
+    let currentTheme = "default";
+    let themePanelOpen = false;
     function escapeHtml(value) {
       return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
+    function findTheme(id) {
+      return stageThemes.find((theme) => theme.id === id) || stageThemes[0];
+    }
+    function applyTheme(themeId) {
+      currentTheme = findTheme(themeId).id;
+      document.body.dataset.theme = currentTheme;
+      document.querySelectorAll("[data-stage-theme]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.stageTheme === currentTheme);
+      });
+      const current = document.querySelector("[data-theme-current]");
+      if (current) current.textContent = "当前风格：" + findTheme(currentTheme).label;
+    }
+    function wireThemeControls() {
+      const panel = document.querySelector("[data-theme-panel]");
+      const toggle = document.querySelector("[data-theme-toggle]");
+      if (toggle) {
+        toggle.addEventListener("click", () => {
+          themePanelOpen = !themePanelOpen;
+          if (panel) panel.classList.toggle("is-open", themePanelOpen);
+          toggle.textContent = themePanelOpen ? "收起风格" : "风格调整";
+        });
+      }
+      document.querySelectorAll("[data-stage-theme]").forEach((button) => {
+        button.addEventListener("click", () => {
+          themePanelOpen = true;
+          applyTheme(button.dataset.stageTheme);
+          if (panel) panel.classList.add("is-open");
+          if (toggle) toggle.textContent = "收起风格";
+        });
+      });
+    }
     function render(payload) {
+      const themeButtons = stageThemes.map((theme) =>
+        '<button type="button" class="theme-option ' + (theme.id === currentTheme ? 'is-active' : '') + '" data-stage-theme="' + escapeHtml(theme.id) + '"><strong>' + escapeHtml(theme.label) + '</strong><span>' + escapeHtml(theme.note) + '</span></button>'
+      ).join("");
+      const activeTheme = findTheme(currentTheme);
       const summary = (payload.summaryLines || []).map(line => '<span class="stage-chip">' + escapeHtml(line) + '</span>').join("");
       const sections = (payload.parts || []).map((part, partIndex) => {
         const songs = (part.music || []).map(song => '<tr class="' + (song.is_playing ? 'is-playing' : '') + '" data-stage-song-index="' + String(song.index ?? (song.num - 1)) + '"><td>' + String(song.num).padStart(2, '0') + '</td><td>' + escapeHtml(song.dance || '未分类') + '</td><td>' + escapeHtml(song.title || '未命名') + '</td><td>' + (song.choose ? '点播' : '-') + '</td><td>' + escapeHtml(song.duration) + '</td></tr>').join("");
         return '<section class="stage-section"><div class="stage-section-head"><h3>' + escapeHtml(part.part_title || ('分场' + (partIndex + 1))) + '</h3><span>' + escapeHtml(part.duration || '') + '</span></div><table class="stage-table"><thead><tr><th>序号</th><th>舞种</th><th>舞曲</th><th>点播</th><th>时长</th></tr></thead><tbody>' + songs + '</tbody></table></section>';
       }).join("");
-      document.getElementById("app").innerHTML = '<div class="stage-shell"><section class="stage-hero"><div class="stage-copy"><p class="stage-eyebrow">Live Dance Screen</p><h1>' + escapeHtml(payload.meta?.title || '青春舞会舞曲') + '</h1><p class="stage-meta">' + escapeHtml((payload.meta?.club || '') + ' ' + (payload.meta?.place || '')) + '</p><p class="stage-meta">' + escapeHtml([payload.meta?.date, ...((payload.meta?.time || []).filter(Boolean))].filter(Boolean).join(' ')) + '</p></div><div class="stage-now ' + (payload.totalSongs ? 'is-live' : '') + '"><span class="stage-now-label">当前播放</span><strong>' + escapeHtml(payload.currentSongLabel || '等待播放') + '</strong><em>共 ' + escapeHtml(payload.totalSongs || 0) + ' 首 / 总时长 ' + escapeHtml(payload.totalDuration || '00:00') + '</em><div class="stage-next"><span>下一首预告</span><strong>' + escapeHtml(payload.nextSongLabel || '等待排曲') + '</strong></div></div></section><section class="stage-controls"><button type="button" data-stage-link="home">返回主页面</button><button type="button" data-stage-action="prev">上一首</button><button type="button" data-stage-action="toggle">' + (payload.isPaused ? '播放' : '暂停') + '</button><button type="button" data-stage-action="sequence">' + (payload.sequenceMode ? '顺播中' : '顺序播放') + '</button><button type="button" data-stage-action="next">下一首</button></section><section class="stage-summary">' + (summary || '<span class="stage-chip">等待舞曲数据</span>') + '</section><section class="stage-board">' + (sections || '<div class="stage-empty">当前还没有可展示的舞曲列表</div>') + '</section></div>';
+      document.getElementById("app").innerHTML = '<div class="stage-shell"><section class="stage-hero"><div class="stage-copy"><p class="stage-eyebrow">Live Dance Screen</p><h1>' + escapeHtml(payload.meta?.title || '青春舞会舞曲') + '</h1><p class="stage-meta">' + escapeHtml((payload.meta?.club || '') + ' ' + (payload.meta?.place || '')) + '</p><p class="stage-meta">' + escapeHtml([payload.meta?.date, ...((payload.meta?.time || []).filter(Boolean))].filter(Boolean).join(' ')) + '</p></div><div class="stage-now ' + (payload.totalSongs ? 'is-live' : '') + '"><span class="stage-now-label">当前播放</span><strong>' + escapeHtml(payload.currentSongLabel || '等待播放') + '</strong><em>共 ' + escapeHtml(payload.totalSongs || 0) + ' 首 / 总时长 ' + escapeHtml(payload.totalDuration || '00:00') + '</em><div class="stage-next"><span>下一首预告</span><strong>' + escapeHtml(payload.nextSongLabel || '等待排曲') + '</strong></div></div></section><section class="stage-controls"><button type="button" data-stage-link="home">返回主页面</button><button type="button" data-stage-action="prev">上一首</button><button type="button" data-stage-action="toggle">' + (payload.isPaused ? '播放' : '暂停') + '</button><button type="button" data-stage-action="sequence">' + (payload.sequenceMode ? '顺播中' : '顺序播放') + '</button><button type="button" data-stage-action="next">下一首</button><button type="button" data-theme-toggle>' + (themePanelOpen ? '收起风格' : '风格调整') + '</button></section><section class="theme-panel ' + (themePanelOpen ? 'is-open' : '') + '" data-theme-panel><div class="theme-panel-head"><strong data-theme-current>当前风格：' + escapeHtml(activeTheme.label) + '</strong><span>默认风格 + 5 套动态主题</span></div><div class="theme-grid">' + themeButtons + '</div></section><section class="stage-summary">' + (summary || '<span class="stage-chip">等待舞曲数据</span>') + '</section><section class="stage-board">' + (sections || '<div class="stage-empty">当前还没有可展示的舞曲列表</div>') + '</section></div>';
       document.querySelectorAll('[data-stage-link="home"]').forEach((button) => {
         button.addEventListener('click', () => {
           if (window.opener && !window.opener.closed) {
@@ -2118,6 +2373,8 @@
           if (controlChannel) controlChannel.postMessage({ action: 'play_song', index: Number(row.dataset.stageSongIndex) });
         });
       });
+      wireThemeControls();
+      applyTheme(currentTheme);
     }
     window.renderStagePage = render;
     render(initialPayload);
@@ -2648,7 +2905,7 @@
       return buildStageHtml(buildStagePayload());
     }
 
-    function openStageView(mode = "stage") {
+    function openStageView() {
       const payload = buildStagePayload(true);
       const html = buildStageHtml(payload);
       stageWindow = window.open("", "_blank");
@@ -2662,10 +2919,10 @@
       els.preview.removeAttribute("src");
       els.preview.style.display = "none";
       els.snapshotCaption.textContent = "已打开大屏展示页";
-      els.snapshotPlaceholder.innerHTML = `<div><strong>大屏已打开</strong><span>${mode === "snapshot" ? "当前页面已跳转为动态快照大屏。" : "当前页面已跳转为舞会 HTML 大屏。"} 后续播放切换也会同步更新。</span></div>`;
+      els.snapshotPlaceholder.innerHTML = `<div><strong>大屏已打开</strong><span>当前页面已打开动态大屏，后续播放切换会实时同步，你也可以在大屏里直接切换展示风格。</span></div>`;
       const channel = ensureStageChannel();
       if (channel) channel.postMessage(payload);
-      log(mode === "snapshot" ? "已打开快照大屏页面" : "已打开大屏 HTML 页面");
+      log("已打开大屏页面");
     }
 
     function auxiliaryPageUrl(relativePath) {
@@ -2731,24 +2988,6 @@
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-    }
-
-    async function buildSnapshot() {
-      els.snapshotBtn.classList.add("is-generating");
-      els.snapshotStage.classList.remove("has-image", "is-ready");
-      els.snapshotStage.classList.add("is-generating");
-      els.snapshotCaption.textContent = "正在打开大屏...";
-      els.snapshotPlaceholder.innerHTML = `<div><strong>大屏启动中</strong><span>正在整理工作台布局、当前播放歌曲和舞曲表，请稍候片刻。</span></div>`;
-      try {
-        openStageView("snapshot");
-      } catch (error) {
-        els.snapshotStage.classList.remove("is-generating");
-        els.snapshotCaption.textContent = "打开失败";
-        els.snapshotPlaceholder.innerHTML = `<div><strong>打开失败</strong><span>${error.message || "浏览器当前阻止了新页面弹出，请允许弹窗后重试。"}</span></div>`;
-        throw error;
-      } finally {
-        els.snapshotBtn.classList.remove("is-generating");
-      }
     }
 
     async function loadFiles() {
@@ -2922,13 +3161,19 @@
         log("已打开 GitHub Issues 列表");
       });
       $("downloadHtmlBtn").addEventListener("click", () => {
+        els.snapshotStage.classList.remove("has-image", "is-ready");
+        els.snapshotStage.classList.add("is-generating");
+        els.snapshotCaption.textContent = "正在打开大屏...";
+        els.snapshotPlaceholder.innerHTML = `<div><strong>大屏启动中</strong><span>正在整理舞曲表、当前播放状态和风格面板，请稍候片刻。</span></div>`;
         try {
-          openStageView("html");
+          openStageView();
         } catch (err) {
+          els.snapshotStage.classList.remove("is-generating");
+          els.snapshotCaption.textContent = "打开失败";
+          els.snapshotPlaceholder.innerHTML = `<div><strong>打开失败</strong><span>${err.message || "浏览器当前阻止了新页面弹出，请允许弹窗后重试。"}</span></div>`;
           log(err.message);
         }
       });
-      $("snapshotBtn").addEventListener("click", () => buildSnapshot().catch(err => log(err.message)));
       $("prevBtn").addEventListener("click", playPreviousSong);
       $("sequencePlayBtn").addEventListener("click", startSequencePlayback);
       $("nextBtn").addEventListener("click", playNextSong);
