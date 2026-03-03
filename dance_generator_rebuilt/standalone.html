@@ -1200,7 +1200,8 @@
     let lastPlayingSongId = "";
     let lastScrolledSongId = "";
     const MAX_LOG_ENTRIES = 120;
-    const LARGE_IMPORT_FILE_THRESHOLD = 180;
+    const LARGE_IMPORT_FILE_THRESHOLD = 120;
+    const HUGE_IMPORT_FILE_THRESHOLD = 320;
     const IMPORT_YIELD_INTERVAL = 20;
 
     function $(id) { return document.getElementById(id); }
@@ -1293,6 +1294,20 @@
           lastText = nextText;
         }
       };
+    }
+
+    function scheduleDanceLibrarySync(reason, successMessage = "") {
+      window.setTimeout(() => {
+        syncSongsToDanceLibrary(reason)
+          .then(() => {
+            if (successMessage) {
+              log(successMessage);
+            }
+          })
+          .catch((error) => {
+            log(`舞曲库后台同步未完成：${error.message || error}`);
+          });
+      }, 0);
     }
 
     function resolveCloudAssetUrl(assetUrl, playlistUrl, fallbackUrl = "") {
@@ -1762,13 +1777,61 @@
     }
 
     function buildImportParseOptions(totalFiles) {
-      const fastMode = shouldUseFastImportMode(totalFiles);
+      const normalizedTotal = Number(totalFiles || 0);
+      const fastMode = shouldUseFastImportMode(normalizedTotal);
+      const hugeMode = normalizedTotal >= HUGE_IMPORT_FILE_THRESHOLD;
       return {
         fastMode,
+        hugeMode,
         skipDurationProbe: fastMode,
         fallbackDuration: DEFAULT_SONG_DURATION_SECONDS,
-        durationTimeoutMs: fastMode ? 1500 : 6000,
+        durationTimeoutMs: fastMode ? 1200 : 6000,
+        yieldInterval: hugeMode ? 6 : fastMode ? 12 : IMPORT_YIELD_INTERVAL,
+        continueOnParseError: fastMode,
+        backgroundLibrarySync: fastMode,
       };
+    }
+
+    async function importDirectoryFiles(files, progress = null, parseOptions = {}) {
+      cleanupSongUrls();
+      state.parts = [];
+      let currentPart = null;
+      let currentFolder = null;
+      let skippedCount = 0;
+      const totalFiles = files.length;
+      const yieldInterval = Math.max(1, Number(parseOptions.yieldInterval || IMPORT_YIELD_INTERVAL));
+
+      for (let startIndex = 0; startIndex < totalFiles; startIndex += yieldInterval) {
+        const endIndex = Math.min(totalFiles, startIndex + yieldInterval);
+        for (let index = startIndex; index < endIndex; index += 1) {
+          const file = files[index];
+          try {
+            const song = await parseSong(file, index, parseOptions);
+            const rel = fileRelativePath(file) || file.name;
+            const folder = createPartTitleFromPath(rel);
+            if (!currentPart || folder !== currentFolder) {
+              currentFolder = folder;
+              currentPart = { part_title: folder, music: [] };
+              state.parts.push(currentPart);
+            }
+            currentPart.music.push(song);
+          } catch (error) {
+            if (!parseOptions.continueOnParseError) {
+              throw error;
+            }
+            skippedCount += 1;
+          }
+        }
+        progress?.update(
+          30 + Math.round((endIndex / Math.max(totalFiles, 1)) * 58),
+          `${parseOptions.fastMode ? "正在分批解析舞曲" : "正在解析舞曲"} ${endIndex}/${totalFiles}`
+        );
+        if (endIndex < totalFiles) {
+          await yieldToBrowser();
+        }
+      }
+
+      return { skippedCount };
     }
 
     async function extractArchiveFiles(archiveFiles, progress = null) {
@@ -4732,36 +4795,25 @@
         }
         const parseOptions = buildImportParseOptions(files.length);
         if (parseOptions.fastMode) {
-          log(`本次共读取 ${files.length} 首舞曲，已启用大批量快速模式：跳过逐首时长探测，优先保证页面稳定`);
+          log(`本次共读取 ${files.length} 首舞曲，已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定`);
         }
-        cleanupSongUrls();
-        state.parts = [];
-        let currentPart = null;
-        let currentFolder = null;
-        for (let i = 0; i < files.length; i++) {
-          progress.update(30 + Math.round(((i + 1) / files.length) * 58), `正在解析舞曲 ${i + 1}/${files.length}`);
-          const file = files[i];
-          const song = await parseSong(file, i, parseOptions);
-          const rel = fileRelativePath(file) || file.name;
-          const folder = createPartTitleFromPath(rel);
-          if (!currentPart || folder !== currentFolder) {
-            currentFolder = folder;
-            currentPart = { part_title: folder, music: [] };
-            state.parts.push(currentPart);
-          }
-          currentPart.music.push(song);
-          if ((i + 1) % IMPORT_YIELD_INTERVAL === 0) {
-            await yieldToBrowser();
-          }
-        }
+        const importSummary = await importDirectoryFiles(files, progress, parseOptions);
         renumber();
         state.issues = [];
         progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
         await yieldToBrowser();
         renderAll();
+        if (importSummary.skippedCount) {
+          log(`本次大批量导入已跳过 ${importSummary.skippedCount} 首异常舞曲，其余内容已继续导入`);
+        }
         log(`已读取 ${allSongs().length} 首舞曲`);
         els.fileInput.value = "";
         els.archiveInput.value = "";
+        if (parseOptions.backgroundLibrarySync) {
+          progress.done(`已完成，共 ${allSongs().length} 首；舞曲库同步将在后台继续`);
+          scheduleDanceLibrarySync("读取文件", "大批量导入后的舞曲库后台同步已完成");
+          return;
+        }
         await syncSongsToDanceLibrary("读取文件");
         progress.done(`已完成，共 ${allSongs().length} 首`);
       } catch (error) {
