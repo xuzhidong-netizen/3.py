@@ -1062,6 +1062,7 @@
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
     const DEFAULT_SONG_DURATION_SECONDS = 210;
+    const CLOUD_FULL_FALLBACK_DURATION_SECONDS = 300;
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
@@ -3610,13 +3611,13 @@
         archiveLabel: "示范舞曲包",
         successMessage: "已导入云端全部示范舞曲",
         syncReason: "导入云端全部示范舞曲",
-        retries: 4,
-        connectTimeoutMs: 20000,
-        stallTimeoutMs: 30000,
+        retries: 6,
+        connectTimeoutMs: 25000,
+        stallTimeoutMs: 45000,
         cacheMode: "default",
         skipDurationProbe: true,
         continueOnEntryError: true,
-        fallbackDuration: DEFAULT_SONG_DURATION_SECONDS,
+        fallbackDuration: CLOUD_FULL_FALLBACK_DURATION_SECONDS,
         durationTimeoutMs: 4000,
       });
     }
@@ -3683,9 +3684,9 @@
       }));
       $("downloadCloudFullBtn").addEventListener("click", () => {
         downloadArchiveWithProgress(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲", {
-          retries: 3,
-          connectTimeoutMs: 15000,
-          stallTimeoutMs: 20000,
+          retries: 6,
+          connectTimeoutMs: 25000,
+          stallTimeoutMs: 45000,
           cacheMode: "default",
         });
       });

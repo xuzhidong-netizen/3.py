@@ -226,7 +226,7 @@ def test_cloud_full_load_uses_default_duration_when_metadata_probe_fails(browser
 
         assert page.locator("#countStat").inner_text() == "3"
         log_entries = page.locator("#log .log-entry")
-        assert any("默认时长" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
+        assert any("默认时长 05:00" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
     finally:
         page.close()
 
