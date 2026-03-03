@@ -898,7 +898,7 @@
       <section class="card">
         <div class="section-head">
           <h2>舞曲表</h2>
-          <span>拖拽舞曲行可调整顺序</span>
+          <span>拖拽舞曲行可调整顺序，点击舞曲可播放</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -1501,7 +1501,6 @@
               <td class="code">${song.source}</td>
               <td>
                 <div class="row-actions">
-                  <button class="play-row">播放</button>
                   <button class="replace-row">替换</button>
                   <button class="delete-row">删除</button>
                 </div>
@@ -1562,10 +1561,6 @@
         });
         row.addEventListener("click", event => {
           if (event.target.closest("button") || event.target.closest("input")) return;
-          const index = Number(row.dataset.num) - 1;
-          playSongAtIndex(index, false);
-        });
-        row.querySelector(".play-row").addEventListener("click", () => {
           const index = Number(row.dataset.num) - 1;
           playSongAtIndex(index, false);
         });
