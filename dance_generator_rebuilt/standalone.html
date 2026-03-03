@@ -1411,6 +1411,68 @@
         .filter((song) => song.title && song.dance);
     }
 
+    function isGitHubStaticPage() {
+      try {
+        return /^https?:/i.test(String(window.location.href || "")) && /github\.io/i.test(new URL(window.location.href).hostname || "");
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function encodePendingLibraryTransfer(entries) {
+      try {
+        const payload = entries.map((item, index) => ({
+          fileName: String(item?.fileName || item?.source || item?.title || `舞曲-${index + 1}`),
+          title: String(item?.title || ""),
+          dance: String(item?.dance || ""),
+          group: String(item?.group || ""),
+          valid: Boolean(item?.valid),
+          reason: String(item?.reason || ""),
+        }));
+        const bytes = new TextEncoder().encode(JSON.stringify(payload));
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+        }
+        return window.btoa(binary);
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function buildPendingLibraryTransferEntries() {
+      return allSongs()
+        .map((song, index) => {
+          const title = String(song?.title || "").trim();
+          const dance = normalizeDanceLabel(String(song?.dance || "").trim());
+          if (!title || !dance) return null;
+          return {
+            fileName: String(song?.source || `${dance}-${title}-${index + 1}.mp3`),
+            title,
+            dance,
+            group: libraryTools?.classifyDanceGroup?.(dance) || "",
+            valid: true,
+            reason: "",
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function getBackendLibraryContinuationUrl(options = {}) {
+      const backendUrl = libraryTools?.getPreferredBackendPageUrl?.("/web_static/library.html");
+      if (!backendUrl) return "";
+      const hashParams = new URLSearchParams();
+      const pendingEntries = options.entries || buildPendingLibraryTransferEntries();
+      if (pendingEntries.length) {
+        hashParams.set("import_pending", encodePendingLibraryTransfer(pendingEntries));
+      }
+      if (options.autoSave) {
+        hashParams.set("auto_save", "1");
+      }
+      return hashParams.size ? `${backendUrl}#${hashParams.toString()}` : backendUrl;
+    }
+
     async function syncSongsToDanceLibrary(reason) {
       if (!libraryTools) {
         log("当前页面未加载舞曲库同步模块，已跳过自动同步");
@@ -1441,6 +1503,19 @@
       if (merged.skipped) details.push(`跳过 ${merged.skipped} 条`);
       log(`${reason}后已自动更新舞曲库：${details.join("，") || "无变化"}`);
 
+      if (isGitHubStaticPage() && !libraryTools.getGitHubToken()) {
+        const backendLibraryUrl = getBackendLibraryContinuationUrl({ autoSave: true });
+        state.staticProtectionActive = true;
+        if (backendLibraryUrl) {
+          setProtectionStatus("当前正在使用 GitHub 静态页。舞曲库已更新到当前浏览器；点击“舞曲库”会自动切到本机服务版继续保存到 GitHub。", "warn", "静态兜底中");
+          log("舞曲库已更新到当前浏览器；点击“舞曲库”会自动切到本机服务版继续保存到 GitHub");
+        } else {
+          setProtectionStatus("当前正在使用 GitHub 静态页。舞曲库已更新到当前浏览器；若要继续同步 GitHub，请先在当前浏览器保存 GitHub Token。", "warn", "静态兜底中");
+          log("舞曲库已更新到当前浏览器；请先保存 GitHub Token 后再继续同步到 GitHub");
+        }
+        return;
+      }
+
       try {
         const result = await libraryTools.saveLibraryData(merged.data);
         if (result.source === "backend") {
@@ -1462,13 +1537,15 @@
         const message = error.message || error;
         if (error?.code === "static_backend_handoff" || String(message).includes("GitHub 静态页")) {
           state.staticProtectionActive = true;
-          setProtectionStatus("当前正在使用 GitHub 静态页。若要直接通过本机服务保存到 GitHub，请切到本机服务版页面；也可以先在当前浏览器保存 GitHub Token 再继续。", "warn", "静态兜底中");
-          log("当前正在使用 GitHub 静态页；如需直接复用本机服务保存 GitHub，请改用本机服务版页面，或先在当前浏览器保存 GitHub Token");
+          setProtectionStatus("当前正在使用 GitHub 静态页。舞曲库已更新到当前浏览器；点击“舞曲库”会自动切到本机服务版继续保存到 GitHub。", "warn", "静态兜底中");
+          log("舞曲库已更新到当前浏览器；点击“舞曲库”会自动切到本机服务版继续保存到 GitHub");
+          return;
         }
         if (String(message).includes("当前页面未连接可用后端服务器")) {
           state.staticProtectionActive = true;
           setProtectionStatus("当前未连接本机服务，且当前浏览器还没有保存 GitHub Token。请先在左侧保存 Token，再用静态兜底同步。", "danger", "等待令牌");
           log("当前未连接本机服务，可在左侧保存 GitHub Token 后继续使用静态兜底同步可上传数据");
+          return;
         }
         log(`舞曲库已先更新到本地缓存，自动同步 GitHub 暂未完成：${error.message || error}`);
       }
@@ -3952,10 +4029,17 @@
     }
 
     function openLibraryView() {
-      const targetUrl = auxiliaryPageUrl("./web_static/library.html");
+      const shouldUseBackendContinuation = isGitHubStaticPage() && !libraryTools?.getGitHubToken?.();
+      const targetUrl = shouldUseBackendContinuation
+        ? getBackendLibraryContinuationUrl({ autoSave: true }) || auxiliaryPageUrl("./web_static/library.html")
+        : auxiliaryPageUrl("./web_static/library.html");
       const libraryWindow = window.open(targetUrl, "_blank");
       if (!libraryWindow) throw new Error("浏览器阻止了舞曲库页面弹出");
       libraryWindow.focus();
+      if (shouldUseBackendContinuation && targetUrl !== STATIC_LIBRARY_URL) {
+        log("已打开本机服务舞曲库页面，并带上当前待同步舞曲信息");
+        return;
+      }
       log(targetUrl === STATIC_LIBRARY_URL ? "已打开 GitHub 静态舞曲库页面" : "已打开本机服务舞曲库页面");
     }
 

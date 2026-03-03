@@ -230,6 +230,9 @@ def test_static_page_shows_fallback_protection_controls(browser, static_server):
         assert page.locator("#clearFallbackTokenBtn").count() == 1
         assert page.locator("#loginFallbackGitHubBtn").count() == 1
         assert page.locator("#openStaticFallbackBtn").count() == 1
+        html = page.content()
+        assert "import_pending" in html
+        assert "auto_save" in html
     finally:
         page.close()
 
