@@ -196,23 +196,23 @@
     .import-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 14px;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
     .import-drop {
       display: grid;
-      gap: 8px;
-      padding: 16px 18px;
-      border-radius: 20px;
+      gap: 6px;
+      padding: 12px 14px;
+      border-radius: 18px;
       border: 1px solid rgba(179, 72, 45, 0.12);
       background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(245, 235, 224, 0.72));
     }
 
     .import-drop-head {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
+      justify-content: flex-start;
+      gap: 8px;
       align-items: center;
     }
 
@@ -223,7 +223,7 @@
     }
 
     .import-drop strong {
-      font-size: 17px;
+      font-size: 15px;
     }
 
     .import-drop span {
@@ -231,16 +231,9 @@
       line-height: 1.6;
     }
 
-    .import-clear-btn {
-      min-width: 88px;
-      min-height: 40px;
-      padding: 8px 14px;
+    .import-drop input[type="file"] {
+      padding-top: 2px;
       font-size: 13px;
-      box-shadow: none;
-      background: rgba(255,255,255,0.84);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      flex: 0 0 auto;
     }
 
     .import-tips {
@@ -796,7 +789,6 @@
               <div class="import-drop-copy">
                 <strong>导入舞曲目录</strong>
               </div>
-              <button id="clearFileInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
             <input id="fileInput" type="file" webkitdirectory multiple>
           </div>
@@ -805,7 +797,6 @@
               <div class="import-drop-copy">
                 <strong>导入 ZIP 压缩包</strong>
               </div>
-              <button id="clearArchiveInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
             <input id="archiveInput" type="file" accept=".zip,application/zip" multiple>
           </div>
@@ -1143,7 +1134,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","clearFileInputBtn","clearArchiveInputBtn","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -3391,12 +3382,6 @@
       autoLoadTimer = null;
     }
 
-    function clearImportSelection(inputEl, label) {
-      clearPendingAutoLoad();
-      inputEl.value = "";
-      log(`已清空${label}选择`);
-    }
-
     async function loadCloudSample() {
       const progress = createProgressLogger("加载前3首示例进度");
       log("正在加载云端前3首示例舞曲...");
@@ -3559,8 +3544,6 @@
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
       els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲目录"));
       els.archiveInput.addEventListener("change", () => scheduleAutoLoad("ZIP 压缩包"));
-      els.clearFileInputBtn.addEventListener("click", () => clearImportSelection(els.fileInput, "舞曲目录"));
-      els.clearArchiveInputBtn.addEventListener("click", () => clearImportSelection(els.archiveInput, "ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已为你打开前3首示例舞曲下载链接`);
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
