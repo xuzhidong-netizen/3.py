@@ -251,6 +251,7 @@ def test_library_and_recognizer_pages_render_core_controls(browser, static_serve
                 assert page.locator("#openBackendBtn").count() == 1
                 html = page.content()
                 assert "import_pending" in html
+                assert "auto_save" in html
             if selector == "#downloadZipBtn":
                 assert page.locator("#downloadAllBtn").count() == 1
         finally:

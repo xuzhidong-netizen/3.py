@@ -514,6 +514,7 @@
       pending: [],
       busy: false,
       librarySource: "cache",
+      transferAutoSave: false,
       syncChannel: tools.createSyncChannel(),
       libraryCategory: "全部",
       libraryDance: "全部",
@@ -618,6 +619,17 @@
       }
     }
 
+    function readTransferredAutoSaveFlag() {
+      try {
+        const hash = String(window.location.hash || "").replace(/^#/, "");
+        if (!hash) return false;
+        const params = new URLSearchParams(hash);
+        return params.get("auto_save") === "1";
+      } catch (error) {
+        return false;
+      }
+    }
+
     function clearTransferredPendingEntriesHash() {
       if (!window.location.hash) return;
       try {
@@ -666,8 +678,18 @@
         return false;
       }
       const normalizedEntries = Array.isArray(entries) ? entries.map(normalizePendingEntry).filter((item) => item.fileName) : [];
-      const transfer = normalizedEntries.length ? encodePendingTransfer(normalizedEntries) : "";
-      const finalUrl = transfer ? `${targetUrl}#import_pending=${encodeURIComponent(transfer)}` : targetUrl;
+      const hashParams = new URLSearchParams();
+      if (normalizedEntries.length) {
+        hashParams.set("import_pending", encodePendingTransfer(normalizedEntries));
+      }
+      if (options.autoSave) {
+        hashParams.set("auto_save", "1");
+      }
+      const finalUrl = hashParams.size ? `${targetUrl}#${hashParams.toString()}` : targetUrl;
+      if (options.sameTab) {
+        window.location.assign(finalUrl);
+        return true;
+      }
       const popup = window.open(finalUrl, "_blank");
       if (!popup) {
         setStatus("浏览器拦截了本机服务页面弹窗，请允许弹窗后重试。", "error");
@@ -948,9 +970,13 @@
         cachePendingEntries();
         const message = error.message || "保存到 GitHub 失败。";
         if (error?.code === "static_backend_handoff" || /GitHub 静态页/.test(message)) {
-          const opened = openBackendLibraryPage(validEntries, { autoTransfer: true });
+          const opened = openBackendLibraryPage(validEntries, {
+            autoTransfer: true,
+            autoSave: true,
+            sameTab: true,
+          });
           if (opened) {
-            setStatus("当前正在使用 GitHub 静态页，已自动切换到本机服务版舞曲库，并带上本次待保存条目。你可以直接在新页面继续保存。", "success");
+            return;
           } else {
             setStatus("当前待保存条目已保存在当前浏览器。请点击“打开本机服务版”继续保存，或先在当前浏览器填写 GitHub Token。", "error");
           }
@@ -1067,6 +1093,7 @@
     }
 
     const transferredPending = readTransferredPendingEntries();
+    state.transferAutoSave = transferredPending.length && readTransferredAutoSaveFlag();
     if (transferredPending.length) {
       state.pending = transferredPending;
       cachePendingEntries();
@@ -1078,9 +1105,19 @@
     if (state.pending.length) {
       const validCount = state.pending.filter((item) => item.valid).length;
       const prefix = transferredPending.length ? "已从静态页接续" : "已恢复上次未保存的";
-      setStatus(`${prefix} ${state.pending.length} 个条目，其中 ${validCount} 个可直接保存。`, "neutral");
+      const suffix = state.transferAutoSave ? "，正在继续保存到 GitHub。" : "。";
+      setStatus(`${prefix} ${state.pending.length} 个条目，其中 ${validCount} 个可直接保存${suffix}`, "neutral");
     }
-    refreshLibrary(state.pending.length > 0);
+    refreshLibrary(state.pending.length > 0).then(() => {
+      if (!state.transferAutoSave) return;
+      state.transferAutoSave = false;
+      if (state.librarySource !== "backend") return;
+      if (!state.pending.some((item) => item.valid)) return;
+      window.setTimeout(() => {
+        setStatus("已切换到本机服务版舞曲库，正在继续保存到 GitHub...", "neutral");
+        savePendingEntries();
+      }, 120);
+    });
   </script>
 </body>
 </html>
