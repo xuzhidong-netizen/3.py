@@ -105,7 +105,46 @@ def test_library_get_normalizes_saved_data(tmp_path, monkeypatch):
     assert payload["songs"][0]["title"] == "月亮惹的祸"
 
 
-def test_library_post_writes_file_and_returns_commit_url(tmp_path, monkeypatch):
+def test_library_get_prefers_github_when_backend_token_exists(tmp_path, monkeypatch):
+    client, library_path = create_client(tmp_path, monkeypatch)
+    library_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "updated_at": "2026-03-03T10:00:00Z",
+                "songs": [{"title": "本地缓存", "dance": "并四", "updated_at": "2026-03-03T10:00:00Z"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DANCE_LIBRARY_GITHUB_TOKEN", "github_pat_test")
+    encoded = json.dumps(
+        {
+            "version": 1,
+            "updated_at": "2026-03-04T08:00:00Z",
+            "songs": [{"title": "GitHub主源", "dance": "伦巴", "updated_at": "2026-03-04T08:00:00Z"}],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    monkeypatch.setattr(
+        web,
+        "github_request",
+        lambda method, url, payload=None: {
+            "sha": "sha-1",
+            "content": web.base64.b64encode(encoded).decode("ascii"),
+        },
+    )
+
+    response = client.get("/api/library")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "backend"
+    assert payload["data"]["songs"][0]["title"] == "GitHub主源"
+
+
+def test_library_post_syncs_github_without_writing_local_cache(tmp_path, monkeypatch):
     client, library_path = create_client(tmp_path, monkeypatch)
     monkeypatch.setattr(web, "sync_library_data_to_github", lambda data: "https://example.com/commit/1")
 
@@ -124,8 +163,31 @@ def test_library_post_writes_file_and_returns_commit_url(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["commit_url"] == "https://example.com/commit/1"
-    saved = json.loads(library_path.read_text(encoding="utf-8"))
-    assert saved["songs"][0]["title"] == "夜来香"
+    assert not library_path.exists()
+
+
+def test_library_get_falls_back_to_local_cache_when_github_read_fails(tmp_path, monkeypatch):
+    client, library_path = create_client(tmp_path, monkeypatch)
+    library_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "updated_at": "2026-03-03T10:00:00Z",
+                "songs": [{"title": "本地缓存", "dance": "并四", "updated_at": "2026-03-03T10:00:00Z"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DANCE_LIBRARY_GITHUB_TOKEN", "github_pat_test")
+    monkeypatch.setattr(web, "read_library_data_from_github", lambda: (_ for _ in ()).throw(RuntimeError("GitHub unavailable")))
+
+    response = client.get("/api/library")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["songs"][0]["title"] == "本地缓存"
+    assert "warning" in payload
 
 
 def test_github_ssl_context_uses_certifi_bundle_when_available(tmp_path, monkeypatch):

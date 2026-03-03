@@ -805,8 +805,9 @@
         tools.cacheLibraryData(state.data);
         renderAll();
         if (!silent) {
-          const prefix = result.source === "backend" ? "已加载舞曲库（当前页面通过本机服务补充同步）" : "已加载舞曲库";
-          setStatus(`${prefix}，共 ${state.data.songs.length} 首舞曲。`, "success");
+          const prefix = result.source === "backend" ? "已加载舞曲库（当前页面通过本机服务代理 GitHub）" : "已加载舞曲库";
+          const extra = result.warning ? ` ${result.warning}` : "";
+          setStatus(`${prefix}，共 ${state.data.songs.length} 首舞曲。${extra}`, result.warning ? "neutral" : "success");
         }
       } catch (error) {
         setStatus(error.message || "舞曲库加载失败。", "error");
@@ -887,7 +888,7 @@
         renderAll();
         const retryText = result.attempts > 1 ? ` 已自动重试 ${result.attempts - 1} 次。` : "";
         const sourceText = result.source === "backend"
-          ? "已保存到 GitHub（当前页面通过本机服务补充同步）"
+          ? "已保存到 GitHub（当前页面通过本机服务代理 GitHub）"
           : result.fallbackFromBackend
             ? "已继续通过当前浏览器保存到 GitHub"
             : "已通过当前浏览器保存到 GitHub";

@@ -188,6 +188,23 @@ def github_request(method: str, url: str, payload: dict | None = None) -> dict:
         raise RuntimeError(f"连接 GitHub 失败：{exc.reason}") from exc
 
 
+def parse_github_library_content(payload: dict | None) -> dict:
+    content = str((payload or {}).get("content") or "").strip()
+    if not content:
+        return library_default_data()
+    try:
+        decoded = base64.b64decode(content.encode("ascii"), validate=False).decode("utf-8")
+        return normalize_library_payload(json.loads(decoded))
+    except Exception:
+        return library_default_data()
+
+
+def read_library_data_from_github() -> dict:
+    contents_url = github_contents_url()
+    payload = github_request("GET", f"{contents_url}?ref={quote(LIBRARY_GITHUB_BRANCH, safe='')}")
+    return parse_github_library_content(payload)
+
+
 def sync_library_data_to_github(data: dict) -> str:
     contents_url = github_contents_url()
     sha = None
@@ -340,7 +357,23 @@ async def serve_file(request: Request) -> Response:
 
 
 async def get_library(_: Request) -> JSONResponse:
-    return JSONResponse({"ok": True, "data": read_library_data(), "source": "backend"})
+    try:
+        token = os.getenv(LIBRARY_GITHUB_TOKEN_ENV, "").strip()
+        if token:
+            return JSONResponse({"ok": True, "data": read_library_data_from_github(), "source": "backend"})
+        return JSONResponse({"ok": True, "data": read_library_data(), "source": "backend"})
+    except Exception as exc:
+        cached = read_library_data()
+        if cached.get("songs"):
+            return JSONResponse(
+                {
+                    "ok": True,
+                    "data": cached,
+                    "source": "backend",
+                    "warning": f"GitHub 读取失败，已回退到本机缓存：{exc}",
+                }
+            )
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
 
 async def save_library(request: Request) -> JSONResponse:
@@ -350,7 +383,6 @@ async def save_library(request: Request) -> JSONResponse:
         if not data.get("songs"):
             return JSONResponse({"ok": False, "error": "舞曲库没有可保存的数据。"}, status_code=400)
         commit_url = sync_library_data_to_github(data)
-        write_library_data(data)
         return JSONResponse({"ok": True, "data": data, "commit_url": commit_url, "source": "backend"})
     except Exception as exc:
         status_code = 503 if LIBRARY_GITHUB_TOKEN_ENV in str(exc) else 500

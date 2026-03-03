@@ -1445,8 +1445,8 @@
         const result = await libraryTools.saveLibraryData(merged.data);
         if (result.source === "backend") {
           state.staticProtectionActive = false;
-          setProtectionStatus("当前页面已连接本机服务，舞曲库保存会优先通过后端写入 GitHub；静态页仅作兜底。", "success", "后端优先");
-          log("舞曲库已保存到 GitHub；当前页面优先通过本机服务同步");
+          setProtectionStatus("当前页面已连接本机服务，舞曲库保存会优先通过后端代理写入 GitHub；静态页仅作兜底。", "success", "后端优先");
+          log("舞曲库已保存到 GitHub；当前页面优先通过本机服务代理同步");
           return;
         }
         if (result.fallbackFromBackend) {
