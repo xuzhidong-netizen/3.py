@@ -159,6 +159,22 @@
     };
   }
 
+  function combineLibraryData(...payloads) {
+    const normalizedPayloads = payloads
+      .filter(Boolean)
+      .map((payload) => normalizeLibraryData(payload));
+    const latestUpdatedAt = normalizedPayloads
+      .map((payload) => String(payload.updated_at || ""))
+      .sort()
+      .at(-1) || "";
+
+    return normalizeLibraryData({
+      version: 1,
+      updated_at: latestUpdatedAt,
+      songs: normalizedPayloads.flatMap((payload) => payload.songs || []),
+    });
+  }
+
   function readCachedLibraryData() {
     try {
       const cached = global.localStorage.getItem(CACHE_KEY);
@@ -215,21 +231,26 @@
 
   async function loadLibraryData() {
     const urls = [RAW_URL, new URL("./dance_library.json", global.location.href).toString()];
+    const mergedCandidates = [readCachedLibraryData()];
     let lastError = null;
     for (const url of [...new Set(urls)]) {
       try {
         const data = normalizeLibraryData(await fetchJson(`${url}${url.includes("?") ? "&" : "?"}ts=${Date.now()}`));
-        cacheLibraryData(data);
+        mergedCandidates.push(data);
+        const mergedData = combineLibraryData(...mergedCandidates);
+        cacheLibraryData(mergedData);
         return {
-          data,
+          data: mergedData,
           source: url,
         };
       } catch (error) {
         lastError = error;
       }
     }
+    const fallbackData = combineLibraryData(...mergedCandidates);
+    cacheLibraryData(fallbackData);
     return {
-      data: readCachedLibraryData(),
+      data: fallbackData,
       source: "cache",
       error: lastError ? lastError.message : "",
     };
@@ -433,6 +454,7 @@
     broadcastLibraryUpdate,
     cacheLibraryData,
     classifyDanceGroup,
+    combineLibraryData,
     clearGitHubToken,
     createSyncChannel,
     defaultLibraryData,

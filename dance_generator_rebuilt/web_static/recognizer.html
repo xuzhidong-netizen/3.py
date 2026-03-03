@@ -396,7 +396,8 @@
     async function refreshLibrary(silent) {
       try {
         const result = await tools.loadLibraryData();
-        state.libraryData = result.data;
+        state.libraryData = tools.combineLibraryData(state.libraryData, result.data);
+        tools.cacheLibraryData(state.libraryData);
         if (state.files.length) {
           reanalyzeFiles();
         } else {

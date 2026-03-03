@@ -482,7 +482,8 @@
     async function refreshLibrary(silent) {
       try {
         const result = await tools.loadLibraryData();
-        state.data = result.data;
+        state.data = tools.combineLibraryData(state.data, result.data);
+        tools.cacheLibraryData(state.data);
         renderAll();
         if (!silent) {
           setStatus(`已加载舞曲库，共 ${state.data.songs.length} 首舞曲。`, "success");
