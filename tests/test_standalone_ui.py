@@ -5,6 +5,7 @@ import http.server
 import socketserver
 import threading
 from pathlib import Path
+import json
 
 import pytest
 from playwright.sync_api import sync_playwright
@@ -12,6 +13,41 @@ from playwright.sync_api import sync_playwright
 
 STATIC_ROOT = Path("/Volumes/Extreme SSD/舞曲生成器/songlist_gen2 3/dance_generator_rebuilt")
 CHROME_PATH = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+TOP3_ZIP_PATH = STATIC_ROOT / "web_static" / "示范舞曲-top3.zip"
+
+
+def stub_cloud_top3(page) -> None:
+    zip_bytes = TOP3_ZIP_PATH.read_bytes()
+    page.route(
+        "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json",
+        lambda route: route.fulfill(
+            status=200,
+            headers={
+                "content-type": "application/json; charset=utf-8",
+                "access-control-allow-origin": "*",
+            },
+            body=json.dumps(
+                {
+                    "version": 1,
+                    "title": "示例歌单",
+                    "download_url": "./web_static/示范舞曲-top3.zip",
+                    "tracks": [],
+                },
+                ensure_ascii=False,
+            ),
+        ),
+    )
+    page.route(
+        "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip",
+        lambda route: route.fulfill(
+            status=200,
+            headers={
+                "content-type": "application/zip",
+                "access-control-allow-origin": "*",
+            },
+            body=zip_bytes,
+        ),
+    )
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -48,6 +84,7 @@ def browser():
 def test_delete_all_clears_loaded_songs(browser, static_server):
     page = browser.new_page()
     try:
+        stub_cloud_top3(page)
         page.goto(f"{static_server}/standalone.html")
         page.locator("#loadCloudBtn").click()
         page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0")
@@ -63,6 +100,20 @@ def test_delete_all_clears_loaded_songs(browser, static_server):
         assert page.locator("#issueCount").inner_text() == "0"
         logs = page.locator("#log .log-entry")
         assert any("已全部删除当前舞曲表" in logs.nth(index).inner_text() for index in range(logs.count()))
+    finally:
+        page.close()
+
+
+def test_cloud_sample_load_resolves_playlist_relative_archive_url(browser, static_server):
+    page = browser.new_page()
+    try:
+        stub_cloud_top3(page)
+        page.goto(f"{static_server}/standalone.html")
+        page.locator("#loadCloudBtn").click()
+        page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0")
+
+        assert page.locator("#countStat").inner_text() == "3"
+        assert page.locator("#songsBody .song-row").count() == 3
     finally:
         page.close()
 

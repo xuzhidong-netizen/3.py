@@ -1011,6 +1011,7 @@
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
+    const CLOUD_SAMPLE_FALLBACK_URL = "./web_static/示范舞曲-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
     const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
@@ -1046,6 +1047,28 @@
       document.body.appendChild(link);
       link.click();
       link.remove();
+    }
+
+    function resolveCloudAssetUrl(assetUrl, playlistUrl, fallbackUrl = "") {
+      const candidate = String(assetUrl || "").trim();
+      if (candidate) {
+        try {
+          return new URL(candidate, playlistUrl || window.location.href).toString();
+        } catch (error) {
+          // Ignore malformed remote URLs and fall back below.
+        }
+      }
+      return fallbackUrl;
+    }
+
+    function normalizeCloudTrack(track, playlistUrl) {
+      if (!track || typeof track !== "object") {
+        return track;
+      }
+      return {
+        ...track,
+        audio_url: resolveCloudAssetUrl(track.audio_url, playlistUrl, "")
+      };
     }
 
     function ensureStageChannel() {
@@ -1323,20 +1346,41 @@
       return extracted;
     }
 
-    async function loadPlaylistArchive(playlist, archiveUrl, label) {
+    async function fetchArchiveBuffer(archiveUrl, label, fallbackUrl = "") {
+      const attemptFetch = async (targetUrl, timeoutMs) => {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(targetUrl, { cache: "no-store", signal: controller.signal });
+          if (!response.ok) {
+            throw new Error(`${label}压缩包读取失败`);
+          }
+          return await response.arrayBuffer();
+        } finally {
+          window.clearTimeout(timer);
+        }
+      };
+
+      try {
+        return await attemptFetch(archiveUrl, 15000);
+      } catch (error) {
+        if (fallbackUrl && fallbackUrl !== archiveUrl) {
+          log(`${label}远端压缩包较慢，改用站内备用包继续加载`);
+          return await attemptFetch(fallbackUrl, 15000);
+        }
+        if (error?.name === "AbortError") {
+          throw new Error(`${label}压缩包读取超时，请点击下载按钮`);
+        }
+        throw error;
+      }
+    }
+
+    async function loadPlaylistArchive(playlist, archiveUrl, label, fallbackUrl = "") {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
-      let response;
-      try {
-        response = await fetch(archiveUrl, { cache: "no-store" });
-      } catch (error) {
-        throw new Error(`${label}压缩包无法直接读取，请点击下载按钮`);
-      }
-      if (!response.ok) {
-        throw new Error(`${label}压缩包读取失败`);
-      }
-      const zip = await JSZip.loadAsync(await response.arrayBuffer());
+      const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, fallbackUrl);
+      const zip = await JSZip.loadAsync(archiveBuffer);
       const entries = Object.values(zip.files)
         .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
         .sort((left, right) => {
@@ -3141,15 +3185,21 @@
 
     async function loadCloudSample() {
       log("正在加载云端前3首示例舞曲...");
-      const response = await fetch(CLOUD_PLAYLIST_URL, { cache: "no-store" });
+      const playlistUrl = CLOUD_PLAYLIST_URL;
+      const response = await fetch(playlistUrl, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("云端歌单读取失败");
       }
       const playlist = await response.json();
-      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
       const playableTracks = tracks.filter(track => track.audio_url);
       if (!playableTracks.length) {
-        await loadPlaylistArchive(playlist, playlist.download_url || CLOUD_SAMPLE_URL, "前3首示范舞曲");
+        await loadPlaylistArchive(
+          playlist,
+          resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_SAMPLE_URL),
+          "前3首示范舞曲",
+          CLOUD_SAMPLE_FALLBACK_URL
+        );
         return;
       }
       cleanupSongUrls();
@@ -3175,15 +3225,16 @@
 
     async function loadCloudFullSample() {
       log("正在加载云端全部示范舞曲...");
-      const response = await fetch(CLOUD_FULL_PLAYLIST_URL, { cache: "no-store" });
+      const playlistUrl = CLOUD_FULL_PLAYLIST_URL;
+      const response = await fetch(playlistUrl, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("云端全部歌单读取失败");
       }
       const playlist = await response.json();
-      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+      const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, playlistUrl)) : [];
       const playableTracks = tracks.filter(track => track.audio_url);
       if (!playableTracks.length) {
-        await loadPlaylistArchive(playlist, playlist.download_url || CLOUD_FULL_URL, "示范舞曲包");
+        await loadPlaylistArchive(playlist, resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_FULL_URL), "示范舞曲包");
         return;
       }
       cleanupSongUrls();
