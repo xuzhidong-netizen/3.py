@@ -582,6 +582,50 @@
       };
     }
 
+    function encodePendingTransfer(entries) {
+      try {
+        const bytes = new TextEncoder().encode(JSON.stringify(entries.map(normalizePendingEntry)));
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+        return window.btoa(binary);
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function decodePendingTransfer(value) {
+      try {
+        const binary = window.atob(String(value || "").trim());
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
+        return Array.isArray(payload) ? payload.map(normalizePendingEntry).filter((item) => item.fileName) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function readTransferredPendingEntries() {
+      try {
+        const hash = String(window.location.hash || "").replace(/^#/, "");
+        if (!hash) return [];
+        const params = new URLSearchParams(hash);
+        return decodePendingTransfer(params.get("import_pending"));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function clearTransferredPendingEntriesHash() {
+      if (!window.location.hash) return;
+      try {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      } catch (error) {
+      }
+    }
+
     function cachePendingEntries() {
       try {
         window.localStorage.setItem(PENDING_CACHE_KEY, JSON.stringify(state.pending.map(normalizePendingEntry)));
@@ -615,19 +659,26 @@
         : "建议填写 GitHub Token，供后端不可用时启用静态兜底";
     }
 
-    function openBackendLibraryPage() {
+    function openBackendLibraryPage(entries = state.pending, options = {}) {
       const targetUrl = tools.getPreferredBackendPageUrl("/web_static/library.html");
       if (!targetUrl) {
         setStatus("当前没有可用的本机服务地址。", "error");
-        return;
+        return false;
       }
-      const popup = window.open(targetUrl, "_blank");
+      const normalizedEntries = Array.isArray(entries) ? entries.map(normalizePendingEntry).filter((item) => item.fileName) : [];
+      const transfer = normalizedEntries.length ? encodePendingTransfer(normalizedEntries) : "";
+      const finalUrl = transfer ? `${targetUrl}#import_pending=${encodeURIComponent(transfer)}` : targetUrl;
+      const popup = window.open(finalUrl, "_blank");
       if (!popup) {
         setStatus("浏览器拦截了本机服务页面弹窗，请允许弹窗后重试。", "error");
-        return;
+        return false;
       }
       popup.focus();
-      setStatus(`已打开本机服务版舞曲库：${targetUrl}`, "success");
+      const suffix = options.autoTransfer && normalizedEntries.length
+        ? `，并已带上 ${normalizedEntries.length} 条待保存条目`
+        : "";
+      setStatus(`已打开本机服务版舞曲库：${targetUrl}${suffix}`, "success");
+      return true;
     }
 
     function renderStats() {
@@ -895,7 +946,17 @@
         setStatus(`${sourceText}，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
       } catch (error) {
         cachePendingEntries();
-        setStatus(`${error.message || "保存到 GitHub 失败。"} 当前待保存条目已保存在当前浏览器，可修正 Token 后直接重试。`, "error");
+        const message = error.message || "保存到 GitHub 失败。";
+        if (error?.code === "static_backend_handoff" || /GitHub 静态页/.test(message)) {
+          const opened = openBackendLibraryPage(validEntries, { autoTransfer: true });
+          if (opened) {
+            setStatus("当前正在使用 GitHub 静态页，已自动切换到本机服务版舞曲库，并带上本次待保存条目。你可以直接在新页面继续保存。", "success");
+          } else {
+            setStatus("当前待保存条目已保存在当前浏览器。请点击“打开本机服务版”继续保存，或先在当前浏览器填写 GitHub Token。", "error");
+          }
+        } else {
+          setStatus(`${message} 当前待保存条目已保存在当前浏览器，可修正 Token 后直接重试。`, "error");
+        }
       } finally {
         state.busy = false;
         els.saveBtn.textContent = "保存到 GitHub";
@@ -1005,11 +1066,19 @@
       };
     }
 
-    state.pending = readPendingEntriesCache();
+    const transferredPending = readTransferredPendingEntries();
+    if (transferredPending.length) {
+      state.pending = transferredPending;
+      cachePendingEntries();
+      clearTransferredPendingEntriesHash();
+    } else {
+      state.pending = readPendingEntriesCache();
+    }
     renderAll();
     if (state.pending.length) {
       const validCount = state.pending.filter((item) => item.valid).length;
-      setStatus(`已恢复上次未保存的 ${state.pending.length} 个条目，其中 ${validCount} 个可直接保存。`, "neutral");
+      const prefix = transferredPending.length ? "已从静态页接续" : "已恢复上次未保存的";
+      setStatus(`${prefix} ${state.pending.length} 个条目，其中 ${validCount} 个可直接保存。`, "neutral");
     }
     refreshLibrary(state.pending.length > 0);
   </script>

@@ -304,14 +304,22 @@
     return getBackendPageCandidates(relativePath)[0] || "";
   }
 
-  function buildNoBackendTokenMessage() {
+  function buildNoBackendTokenError() {
     const backendPageUrl = getPreferredBackendPageUrl("/web_static/library.html");
     if (isGitHubStaticPage()) {
-      return backendPageUrl
-        ? `你当前打开的是 GitHub Pages 静态页。浏览器不能从这个 HTTPS 页面直接调用本机 HTTP 后端，所以不会使用后端里的 GitHub Token。请改为打开本机服务版舞曲库：${backendPageUrl}；如果继续停留在静态页，则需要先在当前浏览器保存 GitHub Token。`
-        : "你当前打开的是 GitHub Pages 静态页。浏览器不能从这个 HTTPS 页面直接调用本机 HTTP 后端，因此不会使用后端里的 GitHub Token。请改为打开本机服务版页面，或先在当前浏览器保存 GitHub Token。";
+      const error = new Error(
+        backendPageUrl
+          ? `当前正在使用 GitHub 静态页，不能直接复用本机服务里的 GitHub 登录状态。请打开本机服务版舞曲库继续保存：${backendPageUrl}；如果继续留在当前页，请先在当前浏览器保存 GitHub Token。`
+          : "当前正在使用 GitHub 静态页，不能直接复用本机服务里的 GitHub 登录状态。请改用本机服务版页面，或先在当前浏览器保存 GitHub Token。"
+      );
+      error.code = "static_backend_handoff";
+      error.backendPageUrl = backendPageUrl;
+      return error;
     }
-    return "当前页面未连接可用后端服务器，且当前浏览器未保存 GitHub Token。";
+    const error = new Error("当前页面未连接可用后端服务器，且当前浏览器未保存 GitHub Token。");
+    error.code = "backend_or_token_missing";
+    error.backendPageUrl = backendPageUrl;
+    return error;
   }
 
   function getBackendLibraryUrl() {
@@ -840,7 +848,7 @@
       if (backendError?.status && backendError.status >= 500) {
         throw backendError;
       }
-      throw new Error(buildNoBackendTokenMessage());
+      throw buildNoBackendTokenError();
     }
 
     const result = await saveLibraryDataToGitHub(data);

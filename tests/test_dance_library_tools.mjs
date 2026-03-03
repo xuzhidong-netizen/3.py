@@ -354,7 +354,7 @@ test("inspectGitHubToken reports classic token repo scope problems", async () =>
   assert.match(result.message, /缺少 repo scope/);
 });
 
-test("saveLibraryData explains github pages cannot directly use local backend token", async () => {
+test("saveLibraryData guides static pages to hand off into backend page", async () => {
   const tools = loadTools({
     location: {
       href: "https://xuzhidong-netizen.github.io/3.py/dance_generator_rebuilt/web_static/library.html",
@@ -364,12 +364,18 @@ test("saveLibraryData explains github pages cannot directly use local backend to
     }),
   });
 
-  await assert.rejects(
-    () => tools.saveLibraryData({
-      version: 1,
-      updated_at: "2026-03-04T10:00:00Z",
-      songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-04T10:00:00Z" }],
-    }),
-    /GitHub Pages 静态页/,
-  );
+  await assert.rejects(async () => {
+    try {
+      await tools.saveLibraryData({
+        version: 1,
+        updated_at: "2026-03-04T10:00:00Z",
+        songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-04T10:00:00Z" }],
+      });
+    } catch (error) {
+      assert.equal(error.code, "static_backend_handoff");
+      assert.match(error.message, /不能直接复用本机服务里的 GitHub 登录状态/);
+      assert.match(error.message, /本机服务版舞曲库/);
+      throw error;
+    }
+  });
 });
