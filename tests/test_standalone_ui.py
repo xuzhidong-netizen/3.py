@@ -220,7 +220,7 @@ def test_static_page_shows_fallback_protection_controls(browser, static_server):
             () => {
               const badge = document.querySelector('#fallbackModeBadge');
               const status = document.querySelector('#fallbackStatus');
-              return badge && status && /静态|等待令牌/.test(badge.textContent) && /静态页面|静态保护模式|GitHub Token/.test(status.textContent);
+              return badge && status && /后端优先|静态兜底|等待令牌/.test(badge.textContent) && /本机服务|静态兜底|GitHub Token/.test(status.textContent);
             }
             """,
             timeout=30000,

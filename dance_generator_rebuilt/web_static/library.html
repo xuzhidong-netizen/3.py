@@ -447,7 +447,7 @@
         </div>
         <div class="settings">
           <div class="field">
-            <span>推荐优先使用 GitHub 静态页和当前浏览器里的 GitHub Token 直接保存到 GitHub。本机服务如果可用，只作为补充同步通道。</span>
+            <span>推荐优先使用当前页面连接的本机服务直接保存到 GitHub；当前浏览器里的 GitHub Token 只在后端暂不可用时作为静态兜底。</span>
             <input id="tokenInput" type="password" placeholder="推荐保存到当前浏览器，供 GitHub 静态页直接使用">
           </div>
           <div class="settings-actions">
@@ -605,12 +605,12 @@
 
     function updateTokenState() {
       if (state.librarySource === "backend") {
-        els.tokenState.textContent = "推荐优先使用 GitHub 静态页；当前页面检测到本机服务在线，可作为补充同步通道";
+        els.tokenState.textContent = "当前页面已连接本机服务，保存时会优先通过后端写入 GitHub；当前浏览器里的 Token 仅作静态兜底";
         return;
       }
       els.tokenState.textContent = tools.getGitHubToken()
-        ? "当前浏览器已保存 GitHub Token（GitHub 静态页可直接使用）"
-        : "建议填写 GitHub Token，供 GitHub 静态页直接保存使用";
+        ? "当前浏览器已保存 GitHub Token（后端暂不可用时可直接启用静态兜底）"
+        : "建议填写 GitHub Token，供后端不可用时启用静态兜底";
     }
 
     function renderStats() {

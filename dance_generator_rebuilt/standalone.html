@@ -935,22 +935,22 @@
 
       <section class="card">
         <div class="section-head">
-          <h2>GitHub 静态优先</h2>
+          <h2>后端优先，静态兜底</h2>
           <span class="badge" id="fallbackModeBadge">检测中</span>
         </div>
         <div class="feedback-form">
-          <p id="fallbackStatus" class="protection-status" data-tone="warn">正在检测 GitHub 静态页优先模式与补充同步通道...</p>
+          <p id="fallbackStatus" class="protection-status" data-tone="warn">正在检测后端优先模式与静态兜底通道...</p>
           <label>
             <span>GitHub Token</span>
-            <input id="fallbackTokenInput" type="password" placeholder="推荐保存到当前浏览器，供 GitHub 静态页直接使用">
+            <input id="fallbackTokenInput" type="password" placeholder="可选：保存到当前浏览器，供静态兜底页直接使用">
           </label>
           <div class="feedback-actions">
             <button id="saveFallbackTokenBtn" type="button">保存令牌</button>
             <button id="clearFallbackTokenBtn" type="button">清除令牌</button>
             <button id="loginFallbackGitHubBtn" type="button">GitHub 登录</button>
-            <button id="openStaticFallbackBtn" type="button">打开 GitHub 静态页</button>
+            <button id="openStaticFallbackBtn" type="button">打开静态兜底页</button>
           </div>
-          <p class="feedback-note">推荐优先使用 GitHub 静态页和当前浏览器里的 GitHub Token 来保存舞曲库等可同步数据。本机服务只作为补充同步通道使用；原始音频仍不会上传。</p>
+          <p class="feedback-note">推荐优先使用当前页面连接的本机服务保存到 GitHub；当后端暂不可用时，再使用当前浏览器里的 GitHub Token 和静态页兜底。原始音频仍不会上传。</p>
         </div>
       </section>
 
@@ -1294,7 +1294,7 @@
       els.weekdayInput.value = weekdays[now.getDay()];
     }
 
-    function setProtectionStatus(message, tone = "warn", badgeText = "静态保护中") {
+    function setProtectionStatus(message, tone = "warn", badgeText = "静态兜底中") {
       if (!els.fallbackStatus || !els.fallbackModeBadge) return;
       els.fallbackStatus.dataset.tone = tone;
       els.fallbackStatus.textContent = message;
@@ -1304,7 +1304,7 @@
     async function refreshFallbackProtectionStatus(options = {}) {
       if (!libraryTools) {
         state.staticProtectionActive = true;
-        setProtectionStatus("当前页面未加载舞曲库同步模块。建议直接使用 GitHub 静态页和当前浏览器里的 GitHub Token。", "danger", "模块缺失");
+        setProtectionStatus("当前页面未加载舞曲库同步模块。可继续使用静态兜底页和当前浏览器里的 GitHub Token。", "danger", "模块缺失");
         return;
       }
 
@@ -1314,10 +1314,10 @@
         state.staticProtectionActive = true;
         setProtectionStatus(
           hasToken
-            ? "当前正在使用 GitHub 静态页，浏览器里已保存 GitHub Token，可直接把舞曲库等可同步数据上传到 GitHub。"
-            : "当前正在使用 GitHub 静态页。若要把舞曲库等可同步数据上传到 GitHub，请先在这里保存 GitHub Token。",
+            ? "当前未连接本机服务，已进入静态兜底模式；浏览器里已保存 GitHub Token，可继续上传舞曲库等可同步数据。"
+            : "当前未连接本机服务。若要继续上传舞曲库等可同步数据，请先在这里保存 GitHub Token，使用静态兜底模式。",
           hasToken ? "warn" : "danger",
-          hasToken ? "GitHub 静态中" : "等待令牌"
+          hasToken ? "静态兜底中" : "等待令牌"
         );
         return;
       }
@@ -1327,10 +1327,10 @@
         state.staticProtectionActive = false;
         setProtectionStatus(
           hasToken
-            ? "推荐继续优先使用 GitHub 静态页和当前浏览器里的 GitHub Token。当前页面也检测到本机服务在线，可作为补充同步通道。"
-            : "推荐优先使用 GitHub 静态页；当前页面检测到本机服务在线，可作为补充同步通道使用。",
+            ? "当前页面已连接本机服务，保存时会优先通过后端写入 GitHub；当前浏览器里的 GitHub Token 仅作静态兜底。"
+            : "当前页面已连接本机服务，保存时会优先通过后端写入 GitHub；静态页仅在后端暂不可用时兜底。",
           "success",
-          "静态优先"
+          "后端优先"
         );
         return;
       }
@@ -1338,16 +1338,16 @@
       state.staticProtectionActive = true;
       setProtectionStatus(
         hasToken
-          ? `当前继续以 GitHub 静态页为主，浏览器里的 GitHub Token 会继续上传可同步数据。${probe.error ? ` 补充通道提示：${probe.error}` : ""}`
-          : `当前继续以 GitHub 静态页为主。请先在这里保存 GitHub Token，或直接打开线上静态页继续使用。${probe.error ? ` 补充通道提示：${probe.error}` : ""}`,
+          ? `当前未连接本机服务，已切换到静态兜底模式；浏览器里的 GitHub Token 会继续上传可同步数据。${probe.error ? ` 后端提示：${probe.error}` : ""}`
+          : `当前未连接本机服务。请先在这里保存 GitHub Token，或直接打开静态兜底页继续使用。${probe.error ? ` 后端提示：${probe.error}` : ""}`,
         hasToken ? "warn" : "danger",
-        hasToken ? "GitHub 静态中" : "等待令牌"
+        hasToken ? "静态兜底中" : "等待令牌"
       );
 
       if (!options.silentLog) {
         log(hasToken
-          ? "当前继续以 GitHub 静态页为主，后续会优先用当前浏览器里的 GitHub Token 同步可上传数据"
-          : "当前继续以 GitHub 静态页为主。请先保存 GitHub Token，再继续同步可上传数据");
+          ? "当前未连接本机服务，后续会先走静态兜底，并使用当前浏览器里的 GitHub Token 同步可上传数据"
+          : "当前未连接本机服务。请先保存 GitHub Token，再继续走静态兜底同步可上传数据");
       }
     }
 
@@ -1357,7 +1357,7 @@
         throw new Error("浏览器阻止了 GitHub 静态页面弹出");
       }
       popup.focus();
-      log("已打开 GitHub 静态主页面");
+      log("已打开 GitHub 静态兜底主页面");
     }
 
     function log(message) {
@@ -1445,25 +1445,25 @@
         const result = await libraryTools.saveLibraryData(merged.data);
         if (result.source === "backend") {
           state.staticProtectionActive = false;
-          setProtectionStatus("当前页面检测到本机服务在线，可作为补充同步通道；页面仍建议优先使用 GitHub 静态页和浏览器里的 GitHub Token。", "success", "静态优先");
-          log("舞曲库已保存到 GitHub；当前页面通过本机服务补充同步");
+          setProtectionStatus("当前页面已连接本机服务，舞曲库保存会优先通过后端写入 GitHub；静态页仅作兜底。", "success", "后端优先");
+          log("舞曲库已保存到 GitHub；当前页面优先通过本机服务同步");
           return;
         }
         if (result.fallbackFromBackend) {
           state.staticProtectionActive = true;
-          setProtectionStatus("当前继续以 GitHub 静态页为主，浏览器里的 GitHub Token 会继续上传可同步数据。", "warn", "GitHub 静态中");
-          log("当前继续以 GitHub 静态页为主，已改用当前浏览器中的 GitHub Token 同步到 GitHub");
+          setProtectionStatus("当前未连接本机服务，已切换到静态兜底模式；浏览器里的 GitHub Token 会继续上传可同步数据。", "warn", "静态兜底中");
+          log("当前未连接本机服务，已改用当前浏览器中的 GitHub Token 做静态兜底同步");
           return;
         }
         state.staticProtectionActive = true;
-        setProtectionStatus("当前正在使用 GitHub 静态页，浏览器里的 GitHub Token 已接管可同步数据上传。", "warn", "GitHub 静态中");
-        log("舞曲库已通过当前浏览器自动同步到 GitHub");
+        setProtectionStatus("当前正在使用静态兜底页，浏览器里的 GitHub Token 已接管可同步数据上传。", "warn", "静态兜底中");
+        log("舞曲库已通过当前浏览器静态兜底同步到 GitHub");
       } catch (error) {
         const message = error.message || error;
         if (String(message).includes("当前页面未连接可用后端服务器")) {
           state.staticProtectionActive = true;
-          setProtectionStatus("当前以 GitHub 静态页为主，但当前浏览器还没有保存 GitHub Token。请先在左侧保存 Token。", "danger", "等待令牌");
-          log("当前以 GitHub 静态页为主，可在左侧保存 GitHub Token 后继续同步可上传数据");
+          setProtectionStatus("当前未连接本机服务，且当前浏览器还没有保存 GitHub Token。请先在左侧保存 Token，再用静态兜底同步。", "danger", "等待令牌");
+          log("当前未连接本机服务，可在左侧保存 GitHub Token 后继续使用静态兜底同步可上传数据");
         }
         log(`舞曲库已先更新到本地缓存，自动同步 GitHub 暂未完成：${error.message || error}`);
       }
@@ -3937,23 +3937,29 @@
     }
 
     function auxiliaryPageUrl(relativePath) {
+      const href = String(window.location.href || "");
+      if (/^https?:/i.test(href) && !/github\.io/i.test(new URL(href).hostname || "")) {
+        return new URL(relativePath, href).toString();
+      }
       if (relativePath === "./web_static/library.html") return STATIC_LIBRARY_URL;
       if (relativePath === "./web_static/recognizer.html") return STATIC_RECOGNIZER_URL;
       return new URL(relativePath, window.location.href).toString();
     }
 
     function openLibraryView() {
-      const libraryWindow = window.open(auxiliaryPageUrl("./web_static/library.html"), "_blank");
+      const targetUrl = auxiliaryPageUrl("./web_static/library.html");
+      const libraryWindow = window.open(targetUrl, "_blank");
       if (!libraryWindow) throw new Error("浏览器阻止了舞曲库页面弹出");
       libraryWindow.focus();
-      log("已打开 GitHub 静态舞曲库页面");
+      log(targetUrl === STATIC_LIBRARY_URL ? "已打开 GitHub 静态舞曲库页面" : "已打开本机服务舞曲库页面");
     }
 
     function openRecognizerView() {
-      const recognizerWindow = window.open(auxiliaryPageUrl("./web_static/recognizer.html"), "_blank");
+      const targetUrl = auxiliaryPageUrl("./web_static/recognizer.html");
+      const recognizerWindow = window.open(targetUrl, "_blank");
       if (!recognizerWindow) throw new Error("浏览器阻止了舞曲识别页面弹出");
       recognizerWindow.focus();
-      log("已打开 GitHub 静态舞曲识别页面");
+      log(targetUrl === STATIC_RECOGNIZER_URL ? "已打开 GitHub 静态舞曲识别页面" : "已打开本机服务舞曲识别页面");
     }
 
     function broadcastStageState() {
