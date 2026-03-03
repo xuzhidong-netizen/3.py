@@ -42,8 +42,8 @@ def test_home_page_returns_standalone_html(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json" in response.text
     assert "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip" in response.text
-    assert "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_full.json" in response.text
-    assert "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip" in response.text
+    assert "/static/cloud_full.json" in response.text
+    assert "./web_static/1.24-top5.zip" in response.text
     assert "./web_static/dance_library_tools.js" in response.text
 
 
