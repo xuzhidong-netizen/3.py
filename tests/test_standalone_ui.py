@@ -254,8 +254,8 @@ def test_large_directory_import_finishes_with_progress_guards(browser, static_se
         logs = page.locator("#log .log-entry")
         texts = [logs.nth(index).inner_text() for index in range(logs.count())]
         assert any("读取详情：目录音频 160 首" in text for text in texts)
-        assert any("已启用大批量快速模式" in text for text in texts)
-        assert any("读取舞曲进度 100% · 已完成，共 160 首；舞曲库同步将在后台继续" in text for text in texts)
+        assert not any("已启用大批量快速模式" in text for text in texts)
+        assert any("读取舞曲进度 100% · 已完成，共 160 首" in text for text in texts)
     finally:
         page.close()
 
@@ -263,10 +263,10 @@ def test_large_directory_import_finishes_with_progress_guards(browser, static_se
 def test_large_import_uses_fast_mode_guards() -> None:
     html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
 
-    assert "const LARGE_IMPORT_FILE_THRESHOLD = 120;" in html
-    assert "const HUGE_IMPORT_FILE_THRESHOLD = 320;" in html
-    assert "const LARGE_IMPORT_TOTAL_BYTES_THRESHOLD = 160 * 1024 * 1024;" in html
-    assert "const HUGE_IMPORT_TOTAL_BYTES_THRESHOLD = 320 * 1024 * 1024;" in html
+    assert "const LARGE_IMPORT_FILE_THRESHOLD = 1000;" in html
+    assert "const HUGE_IMPORT_FILE_THRESHOLD = 1000;" in html
+    assert "const LARGE_IMPORT_TOTAL_BYTES_THRESHOLD = 10000 * 1024 * 1024;" in html
+    assert "const HUGE_IMPORT_TOTAL_BYTES_THRESHOLD = 10000 * 1024 * 1024;" in html
     assert "const IMPORT_YIELD_INTERVAL = 20;" in html
     assert "const IMPORT_GUARD_STALL_MS = 8000;" in html
     assert "const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;" in html
