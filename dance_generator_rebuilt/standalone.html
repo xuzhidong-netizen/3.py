@@ -210,12 +210,12 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      align-items: flex-start;
+      align-items: center;
     }
 
     .import-drop-copy {
-      display: grid;
-      gap: 8px;
+      display: flex;
+      align-items: center;
       min-width: 0;
     }
 
@@ -787,7 +787,6 @@
             <div class="import-drop-head">
               <div class="import-drop-copy">
                 <strong>导入舞曲目录</strong>
-                <span>整目录批量导入，按目录自动分场。</span>
               </div>
               <button id="clearFileInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
@@ -797,7 +796,6 @@
             <div class="import-drop-head">
               <div class="import-drop-copy">
                 <strong>导入 ZIP 压缩包</strong>
-                <span>浏览器内解压 ZIP，只导入音频。</span>
               </div>
               <button id="clearArchiveInputBtn" class="import-clear-btn" type="button">清空选择</button>
             </div>
