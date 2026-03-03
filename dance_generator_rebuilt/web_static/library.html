@@ -447,8 +447,8 @@
         </div>
         <div class="settings">
           <div class="field">
-            <span>如果当前页面运行在后端服务器上，会直接自动保存到 GitHub。只有在纯静态页兜底保存时，才需要填写当前浏览器里的 GitHub Token。</span>
-            <input id="tokenInput" type="password" placeholder="静态页兜底时可填写 GitHub Token">
+            <span>推荐优先使用 GitHub 静态页和当前浏览器里的 GitHub Token 直接保存到 GitHub。本机服务如果可用，只作为补充同步通道。</span>
+            <input id="tokenInput" type="password" placeholder="推荐保存到当前浏览器，供 GitHub 静态页直接使用">
           </div>
           <div class="settings-actions">
             <button id="loginGitHubBtn" type="button">GitHub 登录</button>
@@ -568,12 +568,12 @@
 
     function updateTokenState() {
       if (state.librarySource === "backend") {
-        els.tokenState.textContent = "当前已连接后端服务器，可直接自动保存到 GitHub";
+        els.tokenState.textContent = "推荐优先使用 GitHub 静态页；当前页面检测到本机服务在线，可作为补充同步通道";
         return;
       }
       els.tokenState.textContent = tools.getGitHubToken()
-        ? "当前浏览器已保存 GitHub Token（静态页兜底）"
-        : "当前未连接后端时，可填写 GitHub Token 作为兜底保存方式";
+        ? "当前浏览器已保存 GitHub Token（GitHub 静态页可直接使用）"
+        : "建议填写 GitHub Token，供 GitHub 静态页直接保存使用";
     }
 
     function renderStats() {
@@ -751,7 +751,7 @@
         tools.cacheLibraryData(state.data);
         renderAll();
         if (!silent) {
-          const prefix = result.source === "backend" ? "已从后端加载舞曲库" : "已加载舞曲库";
+          const prefix = result.source === "backend" ? "已加载舞曲库（当前页面通过本机服务补充同步）" : "已加载舞曲库";
           setStatus(`${prefix}，共 ${state.data.songs.length} 首舞曲。`, "success");
         }
       } catch (error) {
@@ -804,9 +804,9 @@
         renderAll();
         const retryText = result.attempts > 1 ? ` 已自动重试 ${result.attempts - 1} 次。` : "";
         const sourceText = result.source === "backend"
-          ? "已通过后端自动保存到 GitHub"
+          ? "已保存到 GitHub（当前页面通过本机服务补充同步）"
           : result.fallbackFromBackend
-            ? "后端暂不可用，已改用当前浏览器保存到 GitHub"
+            ? "已继续通过当前浏览器保存到 GitHub"
             : "已通过当前浏览器保存到 GitHub";
         setStatus(`${sourceText}，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
       } catch (error) {
