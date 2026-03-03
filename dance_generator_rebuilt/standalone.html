@@ -463,6 +463,51 @@
       overflow: auto;
     }
 
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .table-page-size {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .table-page-size select {
+      width: auto;
+      min-width: 120px;
+      min-height: 44px;
+      padding: 10px 14px;
+    }
+
+    .song-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .song-pagination button {
+      min-height: 40px;
+      padding: 8px 16px;
+    }
+
+    .song-pagination .page-note {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
     table {
       width: 100%;
       min-width: 880px;
@@ -997,6 +1042,17 @@
           <h2>舞曲表</h2>
           <span>拖拽舞曲行可调整顺序，点击舞曲可播放 / 暂停</span>
         </div>
+        <div class="table-toolbar">
+          <label class="table-page-size">
+            <span>每页显示</span>
+            <select id="songsPageSize">
+              <option value="20">20 首</option>
+              <option value="50">50 首</option>
+              <option value="100">100 首</option>
+            </select>
+          </label>
+          <div id="songsPagination" class="song-pagination"></div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -1129,7 +1185,9 @@
       currentSong: null,
       currentAudioIndex: 0,
       sequenceMode: false,
-      staticProtectionActive: false
+      staticProtectionActive: false,
+      songTablePage: 1,
+      songTablePageSize: 20,
     };
 
     const els = {};
@@ -2419,6 +2477,38 @@
       };
     }
 
+    function allSongRefs() {
+      const refs = [];
+      state.parts.forEach((part, partIndex) => {
+        part.music.forEach((song, songIndex) => {
+          refs.push({ part, partIndex, song, songIndex });
+        });
+      });
+      return refs;
+    }
+
+    function clampSongTablePage() {
+      const pageSize = [20, 50, 100].includes(state.songTablePageSize) ? state.songTablePageSize : 20;
+      state.songTablePageSize = pageSize;
+      const totalPages = Math.max(1, Math.ceil(allSongs().length / pageSize));
+      state.songTablePage = Math.min(Math.max(1, state.songTablePage), totalPages);
+      return totalPages;
+    }
+
+    function songTablePageInfo() {
+      const refs = allSongRefs();
+      const totalPages = clampSongTablePage();
+      const startIndex = (state.songTablePage - 1) * state.songTablePageSize;
+      const visibleRefs = refs.slice(startIndex, startIndex + state.songTablePageSize);
+      return {
+        refs,
+        totalSongs: refs.length,
+        totalPages,
+        startIndex,
+        visibleRefs,
+      };
+    }
+
     function renumber() {
       let i = 1;
       state.parts.forEach(part => {
@@ -2511,15 +2601,37 @@
       els.issues.innerHTML = state.issues.map(issue => `<div class="issue ${issue.level}"><strong>${issue.level === "error" ? "错误" : "提醒"}</strong><div>${issue.message}</div></div>`).join("");
     }
 
+    function renderSongTablePagination(pageInfo) {
+      $("songsPageSize").value = String(state.songTablePageSize);
+      if (!pageInfo.totalSongs) {
+        $("songsPagination").innerHTML = `<span class="page-note">当前没有舞曲</span>`;
+        return;
+      }
+      $("songsPagination").innerHTML = `
+        <button type="button" data-songs-page-action="prev" ${state.songTablePage <= 1 ? "disabled" : ""}>上一页</button>
+        <span class="page-note">第 ${state.songTablePage} / ${pageInfo.totalPages} 页 · 共 ${pageInfo.totalSongs} 首</span>
+        <button type="button" data-songs-page-action="next" ${state.songTablePage >= pageInfo.totalPages ? "disabled" : ""}>下一页</button>
+      `;
+    }
+
     function renderTable() {
+      const pageInfo = songTablePageInfo();
+      renderSongTablePagination(pageInfo);
+      if (!pageInfo.totalSongs) {
+        els.songsBody.innerHTML = "";
+        return;
+      }
       const rows = [];
-      state.parts.forEach((part, partIndex) => {
-        if (state.parts.length > 1 || part.part_title) {
-          rows.push(`<tr class="part-row" data-type="part"><td colspan="3"><input class="inline-input part-title" value="${part.part_title || `分场${partIndex + 1}`}"></td><td colspan="4">分场时长 ${secondsToClock(part.music.reduce((sum, song) => sum + song.duration, 0))}</td></tr>`);
+      let currentPartIndex = -1;
+      pageInfo.visibleRefs.forEach(({ part, partIndex, song }) => {
+        if (partIndex !== currentPartIndex) {
+          currentPartIndex = partIndex;
+          if (state.parts.length > 1 || part.part_title) {
+            rows.push(`<tr class="part-row" data-type="part" data-part-index="${partIndex}"><td colspan="3"><input class="inline-input part-title" value="${part.part_title || `分场${partIndex + 1}`}"></td><td colspan="4">分场时长 ${secondsToClock(part.music.reduce((sum, item) => sum + item.duration, 0))}</td></tr>`);
+          }
         }
-        part.music.forEach(song => {
           rows.push(`
-            <tr class="song-row" draggable="true" data-type="song" data-num="${song.num}" data-song-id="${song.id}">
+            <tr class="song-row" draggable="true" data-type="song" data-num="${song.num}" data-song-id="${song.id}" data-part-index="${partIndex}">
               <td>${song.num}</td>
               <td><input class="inline-input title" value="${song.title}"></td>
               <td><input class="inline-input dance" value="${song.dance}"></td>
@@ -2534,34 +2646,49 @@
               </td>
             </tr>
           `);
-        });
       });
       els.songsBody.innerHTML = rows.join("");
     }
 
     function syncStateFromTable() {
-      const rows = [...els.songsBody.querySelectorAll("tr")];
-      const parts = [];
-      let currentPart = null;
       const songMap = new Map(allSongs().map(song => [song.id, song]));
-      rows.forEach(row => {
-        if (row.dataset.type === "part") {
-          currentPart = { part_title: row.querySelector(".part-title").value.trim(), music: [] };
-          parts.push(currentPart);
-        } else {
-          if (!currentPart) {
-            currentPart = { part_title: "", music: [] };
-            parts.push(currentPart);
-          }
-          const original = songMap.get(row.dataset.songId);
-          if (!original) return;
-          original.title = row.querySelector(".title").value.trim();
-          original.dance = row.querySelector(".dance").value.trim();
-          original.choose = row.querySelector(".choose").checked;
-          currentPart.music.push(original);
-        }
+      els.songsBody.querySelectorAll(".part-row").forEach((row) => {
+        const partIndex = Number(row.dataset.partIndex);
+        if (!Number.isInteger(partIndex) || !state.parts[partIndex]) return;
+        state.parts[partIndex].part_title = row.querySelector(".part-title")?.value.trim() || "";
       });
-      state.parts = parts.length ? parts : [{ part_title: "", music: [] }];
+      els.songsBody.querySelectorAll(".song-row").forEach((row) => {
+        const original = songMap.get(row.dataset.songId);
+        if (!original) return;
+        original.title = row.querySelector(".title").value.trim();
+        original.dance = row.querySelector(".dance").value.trim();
+        original.choose = row.querySelector(".choose").checked;
+        original.speed = classifySpeed(original.dance);
+        original.dancetype = classifyDanceType(original.dance);
+      });
+      const orderedIdsByPart = new Map();
+      els.songsBody.querySelectorAll(".song-row").forEach((row) => {
+        const partIndex = Number(row.dataset.partIndex);
+        if (!Number.isInteger(partIndex)) return;
+        if (!orderedIdsByPart.has(partIndex)) orderedIdsByPart.set(partIndex, []);
+        orderedIdsByPart.get(partIndex).push(row.dataset.songId);
+      });
+      orderedIdsByPart.forEach((orderedIds, partIndex) => {
+        const part = state.parts[partIndex];
+        if (!part || !orderedIds.length) return;
+        const visibleIdSet = new Set(orderedIds);
+        const replacementSongs = orderedIds.map((songId) => songMap.get(songId)).filter(Boolean);
+        const nextMusic = [...part.music];
+        const positions = [];
+        nextMusic.forEach((song, index) => {
+          if (visibleIdSet.has(song.id)) positions.push(index);
+        });
+        if (positions.length !== replacementSongs.length) return;
+        positions.forEach((position, index) => {
+          nextMusic[position] = replacementSongs[index];
+        });
+        part.music = nextMusic;
+      });
       renumber();
     }
 
@@ -2616,6 +2743,7 @@
       els.songsBody.addEventListener("dragover", (event) => {
         const row = songRowFromTarget(event.target);
         if (!row || !draggedSongRow || draggedSongRow === row) return;
+        if (row.dataset.partIndex !== draggedSongRow.dataset.partIndex) return;
         event.preventDefault();
         const rect = row.getBoundingClientRect();
         const before = event.clientY < rect.top + rect.height / 2;
@@ -4625,6 +4753,23 @@
       $("prevBtn").addEventListener("click", playPreviousSong);
       $("sequencePlayBtn").addEventListener("click", startSequencePlayback);
       $("nextBtn").addEventListener("click", playNextSong);
+      $("songsPageSize").addEventListener("change", () => {
+        syncStateFromTable();
+        state.songTablePageSize = Number($("songsPageSize").value) || 20;
+        state.songTablePage = 1;
+        renderAll();
+      });
+      $("songsPagination").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-songs-page-action]");
+        if (!button || button.disabled) return;
+        syncStateFromTable();
+        if (button.dataset.songsPageAction === "prev" && state.songTablePage > 1) {
+          state.songTablePage -= 1;
+        } else if (button.dataset.songsPageAction === "next") {
+          state.songTablePage += 1;
+        }
+        renderAll();
+      });
       $("playToggleBtn").addEventListener("click", () => {
         if (els.player.paused) els.player.play().catch(() => {});
         else els.player.pause();

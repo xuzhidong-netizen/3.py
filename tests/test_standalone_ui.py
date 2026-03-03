@@ -181,6 +181,8 @@ def test_cloud_full_load_uses_same_origin_assets_without_fetch_failure(browser, 
         page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0", timeout=60000)
 
         assert page.locator("#countStat").inner_text() == "49"
+        assert page.locator("#songsBody .song-row").count() == 20
+        assert "第 1 / 3 页" in page.locator("#songsPagination").inner_text()
         log_entries = page.locator("#log .log-entry")
         assert any("已导入云端全部示范舞曲 49 首" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
         assert not any("Failed to fetch" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
@@ -203,6 +205,16 @@ def test_large_import_uses_fast_mode_guards() -> None:
     assert "已启用大批量快速模式：跳过逐首时长探测，优先保证页面稳定" in html
     assert "await yieldToBrowser();" in html
     assert "song.url = URL.createObjectURL(song.file);" in html
+
+
+def test_song_table_has_pagination_controls() -> None:
+    html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
+
+    assert 'id="songsPageSize"' in html
+    assert 'value="20">20 首' in html
+    assert 'value="50">50 首' in html
+    assert 'value="100">100 首' in html
+    assert 'id="songsPagination"' in html
 
 
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
