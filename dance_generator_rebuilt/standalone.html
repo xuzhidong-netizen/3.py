@@ -1200,17 +1200,6 @@
     let lastPlayingSongId = "";
     let lastScrolledSongId = "";
     const MAX_LOG_ENTRIES = 120;
-    const LARGE_IMPORT_FILE_THRESHOLD = 120;
-    const HUGE_IMPORT_FILE_THRESHOLD = 320;
-    const LARGE_IMPORT_TOTAL_BYTES_THRESHOLD = 160 * 1024 * 1024;
-    const HUGE_IMPORT_TOTAL_BYTES_THRESHOLD = 320 * 1024 * 1024;
-    const IMPORT_YIELD_INTERVAL = 20;
-    const IMPORT_GUARD_STALL_MS = 8000;
-    const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;
-    const IMPORT_AUTO_RESTART_STALL_MS = 16000;
-    const IMPORT_AUTO_RESTART_LIMIT = 1;
-    const IMPORT_AUTO_RESTART_DELAY_MS = 1200;
-    let activeImportRunId = 0;
 
     function $(id) { return document.getElementById(id); }
 
@@ -1254,36 +1243,8 @@
       return `${size.toFixed(digits)} ${units[index]}`;
     }
 
-    function summarizeImportSelection(files) {
-      const list = Array.isArray(files) ? files : [];
-      let totalBytes = 0;
-      let maxBytes = 0;
-      for (const file of list) {
-        const size = Number(file?.size || 0);
-        totalBytes += size;
-        if (size > maxBytes) {
-          maxBytes = size;
-        }
-      }
-      return {
-        totalFiles: list.length,
-        totalBytes,
-        maxBytes,
-      };
-    }
-
     function delay(ms) {
       return new Promise((resolve) => window.setTimeout(resolve, ms));
-    }
-
-    async function yieldToBrowser() {
-      await new Promise((resolve) => {
-        if (typeof window.requestAnimationFrame === "function") {
-          window.requestAnimationFrame(() => resolve());
-          return;
-        }
-        window.setTimeout(resolve, 0);
-      });
     }
 
     function normalizeTimeoutMs(value, fallback) {
@@ -1320,89 +1281,6 @@
           lastText = nextText;
         }
       };
-    }
-
-    function createImportRestartError(message = "导入任务已由保护机制自动重启") {
-      const error = new Error(message);
-      error.code = "import_auto_restarted";
-      return error;
-    }
-
-    function ensureImportRunActive(runId) {
-      if (runId !== activeImportRunId) {
-        throw createImportRestartError();
-      }
-    }
-
-    function createTaskGuard(label, progress = null, options = {}) {
-      let active = true;
-      let stage = "准备中";
-      let detail = "";
-      let progressValue = 0;
-      let lastPulseAt = Date.now();
-      let lastWarningAt = 0;
-      let restartTriggered = false;
-      const onAutoRestart = typeof options.onAutoRestart === "function" ? options.onAutoRestart : null;
-
-      const timer = window.setInterval(() => {
-        if (!active) return;
-        const idleMs = Date.now() - lastPulseAt;
-        if (idleMs < IMPORT_GUARD_STALL_MS) return;
-        if (lastWarningAt && idleMs - lastWarningAt < IMPORT_GUARD_STALL_MS) return;
-        lastWarningAt = idleMs;
-        const seconds = Math.max(1, Math.round(idleMs / 1000));
-        const hint = `${stage}${detail ? `，${detail}` : ""}`;
-        progress?.update(progressValue, `${hint}，浏览器较慢，已启用保护等待 ${seconds} 秒`);
-        log(`${label}保护中：${hint}，已持续等待 ${seconds} 秒`);
-        if (!restartTriggered && onAutoRestart && idleMs >= IMPORT_AUTO_RESTART_STALL_MS) {
-          restartTriggered = true;
-          const restartSeconds = Math.max(1, Math.round(idleMs / 1000));
-          const restartMessage = `${hint}，已停滞 ${restartSeconds} 秒，准备自动重启`;
-          progress?.update(progressValue, restartMessage);
-          log(`${label}自动重启：${restartMessage}`);
-          active = false;
-          window.clearInterval(timer);
-          onAutoRestart({ stage, detail, progressValue, idleMs });
-        }
-      }, IMPORT_GUARD_LOG_INTERVAL_MS);
-
-      const touch = (nextStage = stage, nextDetail = detail, nextProgress = progressValue) => {
-        stage = nextStage || stage;
-        detail = nextDetail || "";
-        progressValue = clampPercent(nextProgress);
-        lastPulseAt = Date.now();
-      };
-
-      return {
-        update(nextStage, nextDetail = "", nextProgress = progressValue) {
-          touch(nextStage, nextDetail, nextProgress);
-        },
-        complete() {
-          active = false;
-          window.clearInterval(timer);
-        },
-        fail(message = "") {
-          active = false;
-          window.clearInterval(timer);
-          if (message) {
-            log(`${label}保护结束：${message}`);
-          }
-        }
-      };
-    }
-
-    function scheduleDanceLibrarySync(reason, successMessage = "") {
-      window.setTimeout(() => {
-        syncSongsToDanceLibrary(reason)
-          .then(() => {
-            if (successMessage) {
-              log(successMessage);
-            }
-          })
-          .catch((error) => {
-            log(`舞曲库后台同步未完成：${error.message || error}`);
-          });
-      }, 0);
     }
 
     function resolveCloudAssetUrl(assetUrl, playlistUrl, fallbackUrl = "") {
@@ -1867,115 +1745,19 @@
       return segments[segments.length - 2] || "";
     }
 
-    function shouldUseFastImportMode(totalFiles, totalBytes = 0) {
-      return Number(totalFiles || 0) >= LARGE_IMPORT_FILE_THRESHOLD
-        || Number(totalBytes || 0) >= LARGE_IMPORT_TOTAL_BYTES_THRESHOLD;
-    }
-
-    function buildImportParseOptions(input, explicitTotalBytes = 0) {
-      const summary = Array.isArray(input)
-        ? summarizeImportSelection(input)
-        : {
-            totalFiles: Number(input || 0),
-            totalBytes: Number(explicitTotalBytes || 0),
-            maxBytes: 0,
-          };
-      const normalizedTotal = Number(summary.totalFiles || 0);
-      const totalBytes = Number(summary.totalBytes || 0);
-      const fastMode = shouldUseFastImportMode(normalizedTotal, totalBytes);
-      const hugeMode = normalizedTotal >= HUGE_IMPORT_FILE_THRESHOLD
-        || totalBytes >= HUGE_IMPORT_TOTAL_BYTES_THRESHOLD;
-      const fastModeReason = normalizedTotal >= LARGE_IMPORT_FILE_THRESHOLD
-        ? `文件数 ${normalizedTotal} 首`
-        : totalBytes >= LARGE_IMPORT_TOTAL_BYTES_THRESHOLD
-          ? `总大小约 ${formatBytes(totalBytes)}`
-          : "";
-      return {
-        fastMode,
-        hugeMode,
-        totalFiles: normalizedTotal,
-        totalBytes,
-        maxBytes: Number(summary.maxBytes || 0),
-        fastModeReason,
-        skipDurationProbe: fastMode,
-        fallbackDuration: DEFAULT_SONG_DURATION_SECONDS,
-        durationTimeoutMs: fastMode ? 1200 : 6000,
-        yieldInterval: hugeMode ? 4 : fastMode ? 8 : IMPORT_YIELD_INTERVAL,
-        continueOnParseError: fastMode,
-        backgroundLibrarySync: fastMode,
-      };
-    }
-
-    async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null, runId = 0) {
-      cleanupSongUrls();
-      state.parts = [];
-      let currentPart = null;
-      let currentFolder = null;
-      let skippedCount = 0;
-      const totalFiles = files.length;
-      const yieldInterval = Math.max(1, Number(parseOptions.yieldInterval || IMPORT_YIELD_INTERVAL));
-
-      for (let startIndex = 0; startIndex < totalFiles; startIndex += yieldInterval) {
-        ensureImportRunActive(runId);
-        const endIndex = Math.min(totalFiles, startIndex + yieldInterval);
-        for (let index = startIndex; index < endIndex; index += 1) {
-          ensureImportRunActive(runId);
-          const file = files[index];
-          try {
-            const song = await parseSong(file, index, parseOptions);
-            ensureImportRunActive(runId);
-            const rel = fileRelativePath(file) || file.name;
-            const folder = createPartTitleFromPath(rel);
-            if (!currentPart || folder !== currentFolder) {
-              currentFolder = folder;
-              currentPart = { part_title: folder, music: [] };
-              state.parts.push(currentPart);
-            }
-            currentPart.music.push(song);
-          } catch (error) {
-            if (!parseOptions.continueOnParseError) {
-              throw error;
-            }
-            skippedCount += 1;
-            log(`目录导入跳过 ${file.name}：${error.message || error}`);
-          }
-        }
-        const lastFile = files[endIndex - 1];
-        const currentName = lastFile ? (fileRelativePath(lastFile) || lastFile.name) : "";
-        progress?.update(
-          30 + Math.round((endIndex / Math.max(totalFiles, 1)) * 58),
-          `${parseOptions.fastMode ? "正在分批解析舞曲" : "正在解析舞曲"} ${endIndex}/${totalFiles}${currentName ? ` · ${currentName}` : ""}`
-        );
-        guard?.update(
-          parseOptions.fastMode ? "分批解析舞曲" : "解析舞曲",
-          `已完成 ${endIndex}/${totalFiles}${currentName ? `，当前 ${currentName}` : ""}`,
-          30 + Math.round((endIndex / Math.max(totalFiles, 1)) * 58)
-        );
-        if (endIndex < totalFiles) {
-          await yieldToBrowser();
-          ensureImportRunActive(runId);
-        }
-      }
-
-      return { skippedCount };
-    }
-
-    async function extractArchiveFiles(archiveFiles, progress = null, guard = null, runId = 0) {
+    async function extractArchiveFiles(archiveFiles, progress = null) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
       const extracted = [];
       for (let archiveIndex = 0; archiveIndex < archiveFiles.length; archiveIndex += 1) {
-        ensureImportRunActive(runId);
         const archiveFile = archiveFiles[archiveIndex];
         const archiveBase = archiveFile.name.replace(/\.zip$/i, "") || "压缩包";
-        guard?.update("读取压缩包", `${archiveFile.name} ${archiveIndex + 1}/${archiveFiles.length}`, 10);
         progress?.update(
           10 + Math.floor((archiveIndex / Math.max(archiveFiles.length, 1)) * 15),
           `正在读取压缩包 ${archiveIndex + 1}/${archiveFiles.length}：${archiveFile.name}`
         );
         const zip = await JSZip.loadAsync(await archiveFile.arrayBuffer());
-        ensureImportRunActive(runId);
         const entries = Object.values(zip.files)
           .filter((entry) => !entry.dir && AUDIO_FILE_PATTERN.test(entry.name))
           .sort((left, right) => {
@@ -1989,10 +1771,8 @@
           continue;
         }
         for (let entryIndex = 0; entryIndex < entries.length; entryIndex += 1) {
-          ensureImportRunActive(runId);
           const entry = entries[entryIndex];
           const blob = await entry.async("blob");
-          ensureImportRunActive(runId);
           const fileName = entry.name.split("/").pop() || `song-${extracted.length + 1}.mp3`;
           const file = new File([blob], fileName, {
             type: blob.type || guessAudioMimeType(fileName),
@@ -2000,19 +1780,10 @@
           });
           file.relativePath = normalizePath(`${archiveBase}/${entry.name}`);
           extracted.push(file);
-          guard?.update(
-            "解压压缩包",
-            `${archiveFile.name} ${entryIndex + 1}/${entries.length} · ${fileName}`,
-            25
-          );
           progress?.update(
             25,
-            `正在解压 ${archiveFile.name} ${entryIndex + 1}/${entries.length} · ${fileName}`
+            `正在解压 ${archiveFile.name} ${entryIndex + 1}/${entries.length}`
           );
-          if ((entryIndex + 1) % IMPORT_YIELD_INTERVAL === 0) {
-            await yieldToBrowser();
-            ensureImportRunActive(runId);
-          }
         }
         log(`已在浏览器中解压 ${archiveFile.name}，得到 ${entries.length} 首舞曲`);
       }
@@ -4910,100 +4681,54 @@
       }
     }
 
-    async function loadFiles(options = {}) {
-      const attempt = Math.max(1, Number(options.attempt || 1));
-      const runId = ++activeImportRunId;
+    async function loadFiles() {
       const progress = createProgressLogger("读取舞曲进度");
-      const guard = createTaskGuard("读取舞曲", progress, {
-        onAutoRestart: () => {
-          if (attempt > IMPORT_AUTO_RESTART_LIMIT) {
-            return;
-          }
-          if (runId === activeImportRunId) {
-            activeImportRunId += 1;
-          }
-          const nextAttempt = attempt + 1;
-          log(`读取舞曲卡住，保护机制将在 ${Math.round(IMPORT_AUTO_RESTART_DELAY_MS / 1000)} 秒后自动重启第 ${nextAttempt} 次`);
-          window.setTimeout(() => {
-            loadFiles({ attempt: nextAttempt, restartReason: "检测到读取长时间停滞" }).catch(err => log(err.message));
-          }, IMPORT_AUTO_RESTART_DELAY_MS);
-        }
-      });
       const audioFiles = [...els.fileInput.files].filter(file => AUDIO_FILE_PATTERN.test(file.name));
       const archiveFiles = [...els.archiveInput.files].filter(file => /\.zip$/i.test(file.name));
       if (!audioFiles.length && !archiveFiles.length) {
         progress.fail("没有可读取的文件");
-        guard.fail("没有可读取的文件");
         log("没有可读取的音频文件或 ZIP 压缩包");
         return;
       }
       try {
-        guard.update("准备读取文件", `目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`, 5);
-        progress.update(5, `已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个${attempt > 1 ? ` · 自动重启第 ${attempt} 次` : ""}`);
-        log(`读取详情：目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个${attempt > 1 ? `，自动重启第 ${attempt} 次` : ""}`);
+        progress.update(5, `已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个`);
         const files = [...audioFiles];
         if (archiveFiles.length) {
-          files.push(...await extractArchiveFiles(archiveFiles, progress, guard, runId));
+          files.push(...await extractArchiveFiles(archiveFiles, progress));
         }
-        ensureImportRunActive(runId);
         if (!files.length) {
           progress.fail("没有可导入的舞曲文件");
-          guard.fail("没有可导入的舞曲文件");
           log("没有可导入的舞曲文件");
           return;
         }
-        const parseOptions = buildImportParseOptions(files);
-        if (parseOptions.fastMode) {
-          log(`本次共读取 ${files.length} 首舞曲，约 ${formatBytes(parseOptions.totalBytes)}，已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定${parseOptions.fastModeReason ? `（触发原因：${parseOptions.fastModeReason}）` : ""}`);
+        cleanupSongUrls();
+        state.parts = [];
+        let currentPart = null;
+        let currentFolder = null;
+        for (let i = 0; i < files.length; i++) {
+          progress.update(30 + Math.round(((i + 1) / files.length) * 58), `正在解析舞曲 ${i + 1}/${files.length}`);
+          const file = files[i];
+          const song = await parseSong(file, i);
+          const rel = fileRelativePath(file) || file.name;
+          const folder = createPartTitleFromPath(rel);
+          if (!currentPart || folder !== currentFolder) {
+            currentFolder = folder;
+            currentPart = { part_title: folder, music: [] };
+            state.parts.push(currentPart);
+          }
+          currentPart.music.push(song);
         }
-        guard.update(
-          "准备解析舞曲",
-          `共 ${files.length} 首，约 ${formatBytes(parseOptions.totalBytes)}${parseOptions.fastMode ? "，已启用快速模式" : ""}`,
-          28
-        );
-        progress.update(
-          28,
-          `准备解析舞曲，共 ${files.length} 首，约 ${formatBytes(parseOptions.totalBytes)}${parseOptions.fastMode ? " · 已启用快速模式" : ""}`
-        );
-        await yieldToBrowser();
-        ensureImportRunActive(runId);
-        const importSummary = await importDirectoryFiles(files, progress, parseOptions, guard, runId);
-        ensureImportRunActive(runId);
         renumber();
         state.issues = [];
-        guard.update("写入舞曲表", `共 ${allSongs().length} 首`, 95);
         progress.update(95, `正在写入舞曲表 ${allSongs().length} 首`);
-        await yieldToBrowser();
-        ensureImportRunActive(runId);
         renderAll();
-        if (importSummary.skippedCount) {
-          log(`本次大批量导入已跳过 ${importSummary.skippedCount} 首异常舞曲，其余内容已继续导入`);
-        }
         log(`已读取 ${allSongs().length} 首舞曲`);
         els.fileInput.value = "";
         els.archiveInput.value = "";
-        if (parseOptions.backgroundLibrarySync) {
-          progress.done(`已完成，共 ${allSongs().length} 首；舞曲库同步将在后台继续`);
-          guard.complete();
-          if (attempt > 1) {
-            log(`读取舞曲自动重启后已恢复成功，第 ${attempt} 次导入完成`);
-          }
-          scheduleDanceLibrarySync("读取文件", "大批量导入后的舞曲库后台同步已完成");
-          return;
-        }
-        guard.update("同步舞曲库", `准备保存 ${allSongs().length} 首的舞曲信息`, 98);
         await syncSongsToDanceLibrary("读取文件");
         progress.done(`已完成，共 ${allSongs().length} 首`);
-        guard.complete();
-        if (attempt > 1) {
-          log(`读取舞曲自动重启后已恢复成功，第 ${attempt} 次导入完成`);
-        }
       } catch (error) {
-        if (error?.code === "import_auto_restarted") {
-          return;
-        }
         progress.fail(error.message || error);
-        guard.fail(error.message || error);
         throw error;
       }
     }

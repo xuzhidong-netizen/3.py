@@ -243,7 +243,7 @@ def test_directory_import_loads_local_folder(browser, static_server, import_dirs
         page.close()
 
 
-def test_large_directory_import_finishes_with_progress_guards(browser, static_server, import_dirs):
+def test_large_directory_import_finishes_with_simple_flow(browser, static_server, import_dirs):
     page = browser.new_page()
     try:
         page.goto(f"{static_server}/standalone.html")
@@ -253,40 +253,29 @@ def test_large_directory_import_finishes_with_progress_guards(browser, static_se
         assert page.locator("#songsBody .song-row").count() == 20
         logs = page.locator("#log .log-entry")
         texts = [logs.nth(index).inner_text() for index in range(logs.count())]
-        assert any("读取详情：目录音频 160 首" in text for text in texts)
-        assert any("已启用大批量快速模式" in text for text in texts)
-        assert any("读取舞曲进度 100% · 已完成，共 160 首；舞曲库同步将在后台继续" in text for text in texts)
+        assert any("已选择舞曲目录，开始自动读取舞曲" in text for text in texts)
+        assert any("已读取 160 首舞曲" in text for text in texts)
+        assert any("读取舞曲进度 100% · 已完成，共 160 首" in text for text in texts)
+        assert not any("已启用大批量快速模式" in text for text in texts)
+        assert not any("舞曲库同步将在后台继续" in text for text in texts)
     finally:
         page.close()
 
 
-def test_large_import_uses_fast_mode_guards() -> None:
+def test_directory_import_reverts_to_simple_flow() -> None:
     html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
 
-    assert "const LARGE_IMPORT_FILE_THRESHOLD = 120;" in html
-    assert "const HUGE_IMPORT_FILE_THRESHOLD = 320;" in html
-    assert "const LARGE_IMPORT_TOTAL_BYTES_THRESHOLD = 160 * 1024 * 1024;" in html
-    assert "const HUGE_IMPORT_TOTAL_BYTES_THRESHOLD = 320 * 1024 * 1024;" in html
-    assert "const IMPORT_YIELD_INTERVAL = 20;" in html
-    assert "const IMPORT_GUARD_STALL_MS = 8000;" in html
-    assert "const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;" in html
-    assert "const IMPORT_AUTO_RESTART_STALL_MS = 16000;" in html
-    assert "const IMPORT_AUTO_RESTART_LIMIT = 1;" in html
-    assert "const IMPORT_AUTO_RESTART_DELAY_MS = 1200;" in html
-    assert "已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定" in html
-    assert "function createImportRestartError(message = \"导入任务已由保护机制自动重启\")" in html
-    assert "function ensureImportRunActive(runId)" in html
-    assert "function createTaskGuard(label, progress = null, options = {})" in html
-    assert "保护中：" in html
-    assert "准备自动重启" in html
-    assert "读取舞曲卡住，保护机制将在" in html
-    assert "读取舞曲自动重启后已恢复成功" in html
-    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null, runId = 0)" in html
-    assert "backgroundLibrarySync: fastMode" in html
-    assert "舞曲库同步将在后台继续" in html
-    assert "song.url = URL.createObjectURL(song.file);" in html
-    assert "总大小约" in html
-    assert "function summarizeImportSelection(files)" in html
+    assert "async function loadFiles()" in html
+    assert "已选择目录音频 ${audioFiles.length} 首，ZIP ${archiveFiles.length} 个" in html
+    assert "正在解析舞曲 ${i + 1}/${files.length}" in html
+    assert "await syncSongsToDanceLibrary(\"读取文件\")" in html
+    assert "async function extractArchiveFiles(archiveFiles, progress = null)" in html
+    assert "function createTaskGuard(label, progress = null, options = {})" not in html
+    assert "function createImportRestartError(message = \"导入任务已由保护机制自动重启\")" not in html
+    assert "function ensureImportRunActive(runId)" not in html
+    assert "function summarizeImportSelection(files)" not in html
+    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null, runId = 0)" not in html
+    assert "舞曲库同步将在后台继续" not in html
 
 
 def test_song_table_has_pagination_controls() -> None:
