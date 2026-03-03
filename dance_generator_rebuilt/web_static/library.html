@@ -447,8 +447,8 @@
         </div>
         <div class="settings">
           <div class="field">
-            <span>GitHub Token（需要对 <code>xuzhidong-netizen/3.py</code> 具备 Contents 写权限，仅保存在当前浏览器。也可以先点“GitHub 登录”打开登录窗口。）</span>
-            <input id="tokenInput" type="password" placeholder="首次使用时填写 GitHub Token">
+            <span>如果当前页面运行在后端服务器上，会直接自动保存到 GitHub。只有在纯静态页兜底保存时，才需要填写当前浏览器里的 GitHub Token。</span>
+            <input id="tokenInput" type="password" placeholder="静态页兜底时可填写 GitHub Token">
           </div>
           <div class="settings-actions">
             <button id="loginGitHubBtn" type="button">GitHub 登录</button>
@@ -510,6 +510,7 @@
       data: tools.defaultLibraryData(),
       pending: [],
       busy: false,
+      librarySource: "cache",
       syncChannel: tools.createSyncChannel(),
       libraryCategory: "全部",
       libraryDance: "全部",
@@ -558,7 +559,13 @@
     }
 
     function updateTokenState() {
-      els.tokenState.textContent = tools.getGitHubToken() ? "当前浏览器已保存 GitHub Token" : "尚未保存 GitHub Token";
+      if (state.librarySource === "backend") {
+        els.tokenState.textContent = "当前已连接后端服务器，可直接自动保存到 GitHub";
+        return;
+      }
+      els.tokenState.textContent = tools.getGitHubToken()
+        ? "当前浏览器已保存 GitHub Token（静态页兜底）"
+        : "当前未连接后端时，可填写 GitHub Token 作为兜底保存方式";
     }
 
     function renderStats() {
@@ -769,11 +776,13 @@
     async function refreshLibrary(silent) {
       try {
         const result = await tools.loadLibraryData();
+        state.librarySource = result.source || "cache";
         state.data = tools.combineLibraryData(state.data, result.data);
         tools.cacheLibraryData(state.data);
         renderAll();
         if (!silent) {
-          setStatus(`已加载舞曲库，共 ${state.data.songs.length} 首舞曲。`, "success");
+          const prefix = result.source === "backend" ? "已从后端加载舞曲库" : "已加载舞曲库";
+          setStatus(`${prefix}，共 ${state.data.songs.length} 首舞曲。`, "success");
         }
       } catch (error) {
         setStatus(error.message || "舞曲库加载失败。", "error");
@@ -810,29 +819,26 @@
       if (typedToken) {
         tools.setGitHubToken(typedToken);
       }
-      if (!tools.getGitHubToken()) {
-        const popup = tools.openGitHubLoginWindow();
-        if (!popup) {
-          setStatus("请先填写并保存 GitHub Token。浏览器拦截了 GitHub 登录窗口，请允许弹窗后重试。", "error");
-          return;
-        }
-        setStatus("请先填写并保存 GitHub Token。已为你打开 GitHub 登录窗口，登录后会跳到 Token 创建页。", "error");
-        return;
-      }
 
       const merged = tools.mergeLibraryEntries(state.data, validEntries);
       state.busy = true;
       els.saveBtn.textContent = "保存中...";
       els.saveBtn.disabled = true;
       try {
-        const result = await tools.saveLibraryDataToGitHub(merged.data);
+        const result = await tools.saveLibraryData(merged.data);
+        state.librarySource = result.source || state.librarySource;
         state.data = result.data;
         state.pending = [];
         els.uploadInput.value = "";
         els.tokenInput.value = "";
         renderAll();
         const retryText = result.attempts > 1 ? ` 已自动重试 ${result.attempts - 1} 次。` : "";
-        setStatus(`已保存到 GitHub，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
+        const sourceText = result.source === "backend"
+          ? "已通过后端自动保存到 GitHub"
+          : result.fallbackFromBackend
+            ? "后端暂不可用，已改用当前浏览器保存到 GitHub"
+            : "已通过当前浏览器保存到 GitHub";
+        setStatus(`${sourceText}，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
       } catch (error) {
         setStatus(error.message || "保存到 GitHub 失败。", "error");
       } finally {

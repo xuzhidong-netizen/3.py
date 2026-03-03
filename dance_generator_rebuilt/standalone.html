@@ -1297,17 +1297,19 @@
       if (merged.skipped) details.push(`跳过 ${merged.skipped} 条`);
       log(`${reason}后已自动更新舞曲库：${details.join("，") || "无变化"}`);
 
-      const token = libraryTools.getGitHubToken();
-      if (!token) {
-        log("当前浏览器未保存 GitHub Token，舞曲库已先更新到本地缓存");
-        return;
-      }
-
       try {
-        await libraryTools.saveLibraryDataToGitHub(merged.data);
-        log("舞曲库已自动同步到 GitHub");
+        const result = await libraryTools.saveLibraryData(merged.data);
+        if (result.source === "backend") {
+          log("舞曲库已通过后端自动同步到 GitHub");
+          return;
+        }
+        if (result.fallbackFromBackend) {
+          log("后端暂不可用，已改用当前浏览器中的 GitHub Token 同步到 GitHub");
+          return;
+        }
+        log("舞曲库已通过当前浏览器自动同步到 GitHub");
       } catch (error) {
-        log(`舞曲库自动同步到 GitHub 失败：${error.message || error}`);
+        log(`舞曲库已先更新到本地缓存，自动同步 GitHub 暂未完成：${error.message || error}`);
       }
     }
 

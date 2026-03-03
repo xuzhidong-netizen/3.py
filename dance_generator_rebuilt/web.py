@@ -356,6 +356,7 @@ def create_app() -> Starlette:
     ]
     routes = [
         Route("/", home),
+        Route("/standalone.html", home),
         Route("/api/state", get_state, methods=["GET"]),
         Route("/api/load", load_directory, methods=["POST"]),
         Route("/api/update", update_state, methods=["POST"]),
@@ -367,6 +368,7 @@ def create_app() -> Starlette:
         Route("/api/library", save_library, methods=["POST"]),
         Route("/api/file", serve_file, methods=["GET"]),
         Mount("/static", app=StaticFiles(directory=STATIC_ROOT), name="static"),
+        Mount("/web_static", app=StaticFiles(directory=STATIC_ROOT), name="web_static"),
     ]
     return Starlette(routes=routes, middleware=middleware)
 

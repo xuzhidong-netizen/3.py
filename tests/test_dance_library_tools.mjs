@@ -8,28 +8,30 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-function loadTools() {
+function loadTools(overrides = {}) {
   const storage = new Map();
+  const defaultLocation = {
+    href: "https://xuzhidong-netizen.github.io/3.py/dance_generator_rebuilt/web_static/library.html",
+  };
+  const defaultStorage = {
+    getItem(key) {
+      return storage.has(key) ? storage.get(key) : null;
+    },
+    setItem(key, value) {
+      storage.set(key, String(value));
+    },
+    removeItem(key) {
+      storage.delete(key);
+    },
+  };
   const context = {
     console,
     URL,
     AbortController,
     TextEncoder,
     TextDecoder,
-    location: {
-      href: "https://xuzhidong-netizen.github.io/3.py/dance_generator_rebuilt/web_static/library.html",
-    },
-    localStorage: {
-      getItem(key) {
-        return storage.has(key) ? storage.get(key) : null;
-      },
-      setItem(key, value) {
-        storage.set(key, String(value));
-      },
-      removeItem(key) {
-        storage.delete(key);
-      },
-    },
+    location: defaultLocation,
+    localStorage: defaultStorage,
     open() {
       return {};
     },
@@ -48,7 +50,10 @@ function loadTools() {
       postMessage() {}
       close() {}
     },
+    ...overrides,
   };
+  context.location = { ...defaultLocation, ...(overrides.location || {}) };
+  context.localStorage = overrides.localStorage || defaultStorage;
   context.window = context;
   vm.runInNewContext(source, context);
   return context.DanceLibraryTools;
@@ -115,4 +120,66 @@ test("queryLibrarySongs ranks exact title matches before fuzzy matches", () => {
 
   assert.equal(matches[0].title, "月亮惹的祸");
   assert.equal(matches[0].score > matches[1].score, true);
+});
+
+test("loadLibraryData prefers backend api when current page runs on backend server", async () => {
+  const tools = loadTools({
+    location: {
+      href: "http://127.0.0.1:8000/web_static/library.html",
+    },
+    fetch: async (url) => {
+      assert.equal(url.startsWith("http://127.0.0.1:8000/api/library"), true);
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          source: "backend",
+          data: {
+            version: 1,
+            updated_at: "2026-03-03T10:00:00Z",
+            songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
+          },
+        }),
+      };
+    },
+  });
+
+  const result = await tools.loadLibraryData();
+
+  assert.equal(result.source, "backend");
+  assert.equal(result.data.songs[0].title, "夜来香");
+});
+
+test("saveLibraryData uses backend api before browser token fallback", async () => {
+  const tools = loadTools({
+    location: {
+      href: "http://127.0.0.1:8000/web_static/library.html",
+    },
+    fetch: async (url, options = {}) => {
+      assert.equal(url, "http://127.0.0.1:8000/api/library");
+      assert.equal(options.method, "POST");
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          source: "backend",
+          commit_url: "https://example.com/commit/1",
+          data: {
+            version: 1,
+            updated_at: "2026-03-03T10:00:00Z",
+            songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
+          },
+        }),
+      };
+    },
+  });
+
+  const result = await tools.saveLibraryData({
+    version: 1,
+    updated_at: "2026-03-03T10:00:00Z",
+    songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
+  });
+
+  assert.equal(result.source, "backend");
+  assert.equal(result.commitUrl, "https://example.com/commit/1");
 });

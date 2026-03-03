@@ -7,6 +7,7 @@
   const CACHE_KEY = "dance-library-cache-v1";
   const TOKEN_KEY = "dance-library-github-token-v1";
   const SYNC_CHANNEL = "dance-library-sync-v1";
+  const BACKEND_API_PATH = "/api/library";
   const GITHUB_LOGIN_URL = "https://github.com/login";
   const GITHUB_PAT_NEW_URL = "https://github.com/settings/personal-access-tokens/new";
   const GITHUB = {
@@ -231,6 +232,39 @@
     return response.json();
   }
 
+  function canUseBackendApi() {
+    return /^https?:/i.test(String(global.location?.href || ""));
+  }
+
+  function getBackendLibraryUrl() {
+    if (!canUseBackendApi()) return "";
+    return new URL(BACKEND_API_PATH, global.location.href).toString();
+  }
+
+  function buildHttpError(fallbackMessage, response, payload) {
+    const error = new Error(payload?.error || payload?.message || `${fallbackMessage}：${response.status}`);
+    error.status = response.status;
+    return error;
+  }
+
+  async function loadLibraryDataFromBackend() {
+    const backendUrl = getBackendLibraryUrl();
+    if (!backendUrl) {
+      throw new Error("当前页面未连接后端舞曲库接口。");
+    }
+    const response = await fetchWithTimeout(`${backendUrl}?ts=${Date.now()}`, { cache: "no-store" });
+    const payload = await safeJson(response);
+    if (!response.ok) {
+      throw buildHttpError("读取后端舞曲库失败", response, payload);
+    }
+    const data = normalizeLibraryData(payload?.data);
+    cacheLibraryData(data);
+    return {
+      data,
+      source: "backend",
+    };
+  }
+
   async function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     const timer = controller ? global.setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -250,6 +284,12 @@
   }
 
   async function loadLibraryData() {
+    if (getBackendLibraryUrl()) {
+      try {
+        return await loadLibraryDataFromBackend();
+      } catch (error) {
+      }
+    }
     const urls = [RAW_URL, new URL("./dance_library.json", global.location.href).toString()];
     const mergedCandidates = [readCachedLibraryData()];
     let lastError = null;
@@ -492,7 +532,63 @@
     throw new Error("保存到 GitHub 失败，请稍后重试。");
   }
 
+  async function saveLibraryDataToBackend(data) {
+    const backendUrl = getBackendLibraryUrl();
+    if (!backendUrl) {
+      throw new Error("当前页面未连接后端舞曲库接口。");
+    }
+    const requestedData = normalizeLibraryData(data);
+    const response = await fetchWithTimeout(backendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: requestedData }),
+    });
+    const payload = await safeJson(response);
+    if (!response.ok) {
+      throw buildHttpError("通过后端保存舞曲库失败", response, payload);
+    }
+    const savedData = normalizeLibraryData(payload?.data || requestedData);
+    cacheLibraryData(savedData);
+    broadcastLibraryUpdate(savedData);
+    return {
+      data: savedData,
+      commitUrl: payload?.commit_url || "",
+      source: "backend",
+      attempts: 1,
+    };
+  }
+
+  async function saveLibraryData(data) {
+    let backendError = null;
+    if (getBackendLibraryUrl()) {
+      try {
+        return await saveLibraryDataToBackend(data);
+      } catch (error) {
+        backendError = error;
+      }
+    }
+
+    const token = getGitHubToken();
+    if (!token) {
+      if (backendError?.status && backendError.status >= 500) {
+        throw backendError;
+      }
+      throw new Error("当前页面未连接可用后端服务器，且当前浏览器未保存 GitHub Token。");
+    }
+
+    const result = await saveLibraryDataToGitHub(data);
+    return {
+      ...result,
+      source: "github-token",
+      fallbackFromBackend: Boolean(backendError),
+      backendError: backendError?.message || "",
+    };
+  }
+
   global.DanceLibraryTools = {
+    BACKEND_API_PATH,
     BALLROOM,
     CACHE_KEY,
     COLLECTIVE,
@@ -512,8 +608,10 @@
     defaultLibraryData,
     entryKey,
     escapeHtml,
+    getBackendLibraryUrl,
     getGitHubToken,
     loadLibraryData,
+    loadLibraryDataFromBackend,
     mergeLibraryEntries,
     normalizeDanceLabel,
     normalizeLibraryData,
@@ -524,6 +622,8 @@
     queryLibrarySongs,
     readCachedLibraryData,
     resolveDanceFromLibrary,
+    saveLibraryData,
+    saveLibraryDataToBackend,
     saveLibraryDataToGitHub,
     setGitHubToken,
   };

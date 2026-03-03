@@ -47,6 +47,18 @@ def test_home_page_returns_standalone_html(tmp_path, monkeypatch):
     assert "./web_static/dance_library_tools.js" in response.text
 
 
+def test_backend_serves_standalone_alias_and_web_static_pages(tmp_path, monkeypatch):
+    client, _ = create_client(tmp_path, monkeypatch)
+
+    standalone_response = client.get("/standalone.html")
+    library_response = client.get("/web_static/library.html")
+
+    assert standalone_response.status_code == 200
+    assert "青春舞会舞曲" in standalone_response.text
+    assert library_response.status_code == 200
+    assert "舞曲库" in library_response.text
+
+
 def test_load_endpoint_requires_path(tmp_path, monkeypatch):
     client, _ = create_client(tmp_path, monkeypatch)
 

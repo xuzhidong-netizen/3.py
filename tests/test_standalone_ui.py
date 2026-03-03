@@ -231,7 +231,7 @@ def test_cloud_full_load_uses_default_duration_when_metadata_probe_fails(browser
         page.close()
 
 
-def test_import_clear_buttons_reset_picker_values(browser, static_server):
+def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
     page = browser.new_page()
     try:
         page.goto(f"{static_server}/standalone.html")
@@ -239,22 +239,10 @@ def test_import_clear_buttons_reset_picker_values(browser, static_server):
         assert page.locator("#downloadCloudBtn").inner_text() == "下载前3首示例舞曲"
         assert page.locator("#loadCloudFullBtn").inner_text() == "加载云端全部示范舞曲"
         assert page.locator("#downloadCloudFullBtn").inner_text() == "下载全部示范舞曲"
-        page.evaluate(
-            """
-            () => {
-              const fileInput = document.getElementById('fileInput');
-              const archiveInput = document.getElementById('archiveInput');
-              Object.defineProperty(fileInput, 'value', { configurable: true, writable: true, value: 'mock-directory' });
-              Object.defineProperty(archiveInput, 'value', { configurable: true, writable: true, value: 'mock-archive' });
-            }
-            """
-        )
-
-        page.locator("#clearFileInputBtn").click()
-        page.locator("#clearArchiveInputBtn").click()
-
-        assert page.locator("#fileInput").evaluate("element => element.value") == ""
-        assert page.locator("#archiveInput").evaluate("element => element.value") == ""
+        assert page.locator("#fileInput").count() == 1
+        assert page.locator("#archiveInput").count() == 1
+        assert page.locator("#clearFileInputBtn").count() == 0
+        assert page.locator("#clearArchiveInputBtn").count() == 0
     finally:
         page.close()
 
