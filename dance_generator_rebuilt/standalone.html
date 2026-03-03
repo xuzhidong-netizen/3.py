@@ -851,6 +851,7 @@
               <button id="recognizerBtn">舞曲识别</button>
               <button id="addPartBtn">增加分场</button>
               <button id="addSongBtn">增加舞曲</button>
+              <button id="deleteAllSongsBtn">全部删除</button>
             </div>
           </div>
           <div class="control-group">
@@ -1060,7 +1061,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","clearFileInputBtn","clearArchiveInputBtn","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","clearFileInputBtn","clearArchiveInputBtn","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -3208,6 +3209,20 @@
       log("已增加分场");
     }
 
+    function deleteAllSongs() {
+      cleanupSongUrls();
+      state.parts = [{ part_title: "", music: [] }];
+      state.issues = [];
+      state.currentSong = null;
+      state.currentAudioIndex = 0;
+      state.sequenceMode = false;
+      els.player.pause();
+      els.player.removeAttribute("src");
+      els.player.load();
+      renderAll();
+      log("已全部删除当前舞曲表");
+    }
+
     async function addSong() {
       const picker = document.createElement("input");
       picker.type = "file";
@@ -3257,6 +3272,7 @@
       $("checkBtn").addEventListener("click", () => validateRules().catch(err => log(err.message)));
       $("addPartBtn").addEventListener("click", addPart);
       $("addSongBtn").addEventListener("click", () => addSong().catch(err => log(err.message)));
+      els.deleteAllSongsBtn.addEventListener("click", deleteAllSongs);
       $("downloadTxtBtn").addEventListener("click", () => download("舞曲列表.txt", buildTxt(), "text/plain;charset=utf-8"));
       $("submitIssueBtn").addEventListener("click", () => {
         try {
