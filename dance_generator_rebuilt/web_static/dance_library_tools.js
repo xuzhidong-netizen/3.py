@@ -17,6 +17,8 @@
   };
   const CONTENTS_URL = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path.split("/").map(encodeURIComponent).join("/")}`;
   const RAW_URL = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${GITHUB.branch}/${GITHUB.path}`;
+  const REQUEST_TIMEOUT_MS = 20000;
+  const SAVE_RETRY_LIMIT = 2;
   const GROUP_MAP = new Map([
     ...HANDLE.map((dance) => [dance, "拉手舞"]),
     ...FRAME.map((dance) => [dance, "架型舞"]),
@@ -222,11 +224,29 @@
   }
 
   async function fetchJson(url) {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchWithTimeout(url, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`读取失败：${response.status}`);
     }
     return response.json();
+  }
+
+  async function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = controller ? global.setTimeout(() => controller.abort(), timeoutMs) : null;
+    try {
+      return await fetch(resource, {
+        ...options,
+        signal: controller ? controller.signal : options.signal,
+      });
+    } catch (error) {
+      if (controller && error?.name === "AbortError") {
+        throw new Error("请求超时，请重试。");
+      }
+      throw error;
+    } finally {
+      if (timer) global.clearTimeout(timer);
+    }
   }
 
   async function loadLibraryData() {
@@ -362,6 +382,26 @@
     }
   }
 
+  function decodeBase64Utf8(value) {
+    const binary = global.atob(String(value || "").replace(/\s+/g, ""));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function parseGitHubLibraryContent(payload) {
+    if (!payload?.content) return defaultLibraryData();
+    try {
+      return normalizeLibraryData(JSON.parse(decodeBase64Utf8(payload.content)));
+    } catch (error) {
+      return defaultLibraryData();
+    }
+  }
+
+  function isShaMismatch(response, errorData) {
+    const message = String(errorData?.message || "");
+    return response?.status === 409 || /does not match/i.test(message);
+  }
+
   function utf8ToBase64(value) {
     const bytes = new TextEncoder().encode(value);
     let binary = "";
@@ -399,45 +439,57 @@
       "X-GitHub-Api-Version": "2022-11-28",
     };
 
-    let sha = null;
-    const currentResponse = await fetch(`${CONTENTS_URL}?ref=${encodeURIComponent(GITHUB.branch)}`, {
-      headers: authHeaders,
-    });
-    if (currentResponse.ok) {
-      const currentData = await currentResponse.json();
-      sha = currentData.sha || null;
-    } else if (currentResponse.status !== 404) {
-      const errorData = await safeJson(currentResponse);
-      throw new Error(errorData.message || "读取 GitHub 上的舞曲库失败。");
-    }
+    const requestedData = normalizeLibraryData(data);
 
-    const normalized = normalizeLibraryData(data);
-    const payload = {
-      message: `update dance library ${new Date().toISOString()}`,
-      content: utf8ToBase64(`${JSON.stringify(normalized, null, 2)}\n`),
-      branch: GITHUB.branch,
-    };
-    if (sha) payload.sha = sha;
+    for (let attempt = 0; attempt <= SAVE_RETRY_LIMIT; attempt += 1) {
+      let sha = null;
+      let remoteData = defaultLibraryData();
+      const currentResponse = await fetchWithTimeout(`${CONTENTS_URL}?ref=${encodeURIComponent(GITHUB.branch)}`, {
+        headers: authHeaders,
+      });
+      if (currentResponse.ok) {
+        const currentData = await currentResponse.json();
+        sha = currentData.sha || null;
+        remoteData = parseGitHubLibraryContent(currentData);
+      } else if (currentResponse.status !== 404) {
+        const errorData = await safeJson(currentResponse);
+        throw new Error(errorData.message || "读取 GitHub 上的舞曲库失败。");
+      }
 
-    const saveResponse = await fetch(CONTENTS_URL, {
-      method: "PUT",
-      headers: {
-        ...authHeaders,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    const saveData = await safeJson(saveResponse);
-    if (!saveResponse.ok) {
+      const normalized = attempt === 0 ? requestedData : combineLibraryData(remoteData, requestedData);
+      const payload = {
+        message: `update dance library ${new Date().toISOString()}`,
+        content: utf8ToBase64(`${JSON.stringify(normalized, null, 2)}\n`),
+        branch: GITHUB.branch,
+      };
+      if (sha) payload.sha = sha;
+
+      const saveResponse = await fetchWithTimeout(CONTENTS_URL, {
+        method: "PUT",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const saveData = await safeJson(saveResponse);
+      if (saveResponse.ok) {
+        cacheLibraryData(normalized);
+        broadcastLibraryUpdate(normalized);
+        return {
+          data: normalized,
+          commitUrl: saveData.commit?.html_url || "",
+          attempts: attempt + 1,
+        };
+      }
+
+      if (attempt < SAVE_RETRY_LIMIT && isShaMismatch(saveResponse, saveData)) {
+        continue;
+      }
       throw new Error(saveData.message || "保存到 GitHub 失败。");
     }
 
-    cacheLibraryData(normalized);
-    broadcastLibraryUpdate(normalized);
-    return {
-      data: normalized,
-      commitUrl: saveData.commit?.html_url || "",
-    };
+    throw new Error("保存到 GitHub 失败，请稍后重试。");
   }
 
   global.DanceLibraryTools = {

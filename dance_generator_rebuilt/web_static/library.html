@@ -749,7 +749,8 @@
         els.uploadInput.value = "";
         els.tokenInput.value = "";
         renderAll();
-        setStatus(`已保存到 GitHub，新增 ${merged.added} 首，更新 ${merged.updated} 首。`, "success");
+        const retryText = result.attempts > 1 ? ` 已自动重试 ${result.attempts - 1} 次。` : "";
+        setStatus(`已保存到 GitHub，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
       } catch (error) {
         setStatus(error.message || "保存到 GitHub 失败。", "error");
       } finally {
