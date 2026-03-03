@@ -190,47 +190,6 @@
       justify-content: flex-end;
     }
 
-    .quick-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .quick-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      padding: 0 18px;
-      border-radius: 999px;
-      text-decoration: none;
-      font-weight: 700;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.78);
-      box-shadow: 0 12px 24px rgba(29, 35, 31, 0.08);
-      transition: transform 150ms ease, box-shadow 150ms ease;
-    }
-
-    .quick-link:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 28px rgba(29, 35, 31, 0.12);
-    }
-
-    .quick-link.is-library {
-      background: linear-gradient(135deg, rgba(225, 106, 45, 0.18), rgba(243, 186, 79, 0.26));
-      color: #5e2a12;
-    }
-
-    .quick-link.is-recognizer {
-      background: linear-gradient(135deg, rgba(45, 143, 131, 0.18), rgba(136, 217, 191, 0.28));
-      color: #0b4038;
-    }
-
-    .quick-link.is-web {
-      background: linear-gradient(135deg, rgba(29, 35, 31, 0.08), rgba(97, 112, 106, 0.18));
-    }
-
     .import-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -730,10 +689,6 @@
         gap: 10px;
       }
 
-      .quick-links {
-        flex-direction: column;
-      }
-
       .stats {
         grid-template-columns: 1fr;
       }
@@ -762,11 +717,6 @@
             <span class="badge">浏览器版</span>
             <span class="badge">本地文件不上传</span>
           </div>
-        </div>
-        <div class="quick-links">
-          <a class="quick-link is-web" href="./web_static/index.html">打开 Web 控制台</a>
-          <a class="quick-link is-library" href="./web_static/library.html" target="_blank" rel="noopener">打开舞曲库页</a>
-          <a class="quick-link is-recognizer" href="./web_static/recognizer.html" target="_blank" rel="noopener">打开舞曲识别页</a>
         </div>
       </section>
 
@@ -1514,7 +1464,13 @@
               <td><input type="checkbox" class="choose" ${song.choose ? "checked" : ""}></td>
               <td>${secondsToClock(song.duration)}</td>
               <td class="code">${song.source}</td>
-              <td><button class="play-row">播放</button> <button class="delete-row">删除</button></td>
+              <td>
+                <div class="row-actions">
+                  <button class="play-row">播放</button>
+                  <button class="replace-row">替换</button>
+                  <button class="delete-row">删除</button>
+                </div>
+              </td>
             </tr>
           `);
         });
@@ -1577,6 +1533,10 @@
         row.querySelector(".play-row").addEventListener("click", () => {
           const index = Number(row.dataset.num) - 1;
           playSongAtIndex(index, false);
+        });
+        row.querySelector(".replace-row").addEventListener("click", () => {
+          const songId = row.dataset.songId;
+          replaceSongById(songId).catch(err => log(err.message));
         });
         row.querySelector(".delete-row").addEventListener("click", () => {
           const index = Number(row.dataset.num) - 1;
@@ -1649,7 +1609,44 @@
       playSongAtIndex(state.currentAudioIndex || 0, true);
     }
 
-    function validateRules() {
+    function buildLibraryLookupInput(song) {
+      if (!libraryTools) return null;
+      const sourceName = String(song?.source || "").split("/").pop() || "";
+      const parsed = libraryTools.parseSongFileName(sourceName || song?.title || "");
+      const title = String(song?.title || "").trim() || parsed.title || parsed.raw || parsed.stem || "";
+      const raw = title || parsed.raw || parsed.stem || sourceName;
+      return {
+        ...parsed,
+        title,
+        raw,
+        stem: raw,
+        titleKey: libraryTools.normalizeSearchText(title),
+        rawKey: libraryTools.normalizeSearchText(raw),
+      };
+    }
+
+    function validateDanceAgainstLibrary(song, libraryData) {
+      if (!libraryTools || !libraryData) return [];
+      const lookup = buildLibraryLookupInput(song);
+      if (!lookup) return [];
+      const resolved = libraryTools.resolveDanceFromLibrary(libraryData, lookup);
+      if (!resolved.dance) return [];
+      const currentDance = normalizeDanceLabel(String(song?.dance || "").trim());
+      const recognizedDance = normalizeDanceLabel(String(resolved.dance || "").trim());
+      const sourceText = resolved.mode === "exact" ? "舞曲库精确匹配" : "舞曲库近似匹配";
+      if (!currentDance) {
+        return [{ level: "warn", message: `${song.title} 舞曲识别建议为 ${recognizedDance}，当前舞种为空` }];
+      }
+      if (currentDance !== recognizedDance) {
+        return [{
+          level: "warn",
+          message: `${song.title} 当前舞种为 ${currentDance}，${sourceText}结果为 ${recognizedDance}，请确认`
+        }];
+      }
+      return [];
+    }
+
+    async function validateRules() {
       syncStateFromTable();
       const issues = [];
       const songs = allSongs();
@@ -1673,9 +1670,70 @@
         if ((sourceCounts.get(song.source) || 0) > 1) issues.push({ level: "error", message: `${song.title} 重复` });
         previous = song;
       });
+      if (libraryTools) {
+        let libraryData = libraryTools.readCachedLibraryData();
+        try {
+          const loaded = await libraryTools.loadLibraryData();
+          libraryData = libraryTools.combineLibraryData(libraryData, loaded.data);
+        } catch (error) {
+          log(`舞曲库读取失败，本次规则检查改用本地缓存：${error.message || error}`);
+        }
+        songs.forEach((song) => {
+          issues.push(...validateDanceAgainstLibrary(song, libraryData));
+        });
+      }
       state.issues = issues;
       renderIssues();
       log(`规则检查完成，共 ${issues.length} 条提示`);
+    }
+
+    function revokeSongUrl(song) {
+      if (song?.url && typeof song.url === "string" && song.url.startsWith("blob:")) {
+        URL.revokeObjectURL(song.url);
+      }
+    }
+
+    function replaceSongData(targetSong, nextSong) {
+      const wasCurrentSong = state.currentSong?.id === targetSong.id;
+      const wasPlaying = wasCurrentSong && !els.player.paused;
+      revokeSongUrl(targetSong);
+      Object.assign(targetSong, {
+        ...nextSong,
+        id: targetSong.id,
+        num: targetSong.num,
+      });
+      targetSong.speed = classifySpeed(targetSong.dance);
+      targetSong.dancetype = classifyDanceType(targetSong.dance);
+      if (wasCurrentSong) {
+        state.currentSong = targetSong;
+        els.player.src = targetSong.url;
+        if (wasPlaying) {
+          els.player.play().catch(() => {});
+        }
+      }
+    }
+
+    async function replaceSongById(songId) {
+      syncStateFromTable();
+      const targetSong = allSongs().find((song) => song.id === songId);
+      if (!targetSong) {
+        throw new Error("未找到需要替换的舞曲");
+      }
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = ".mp3,.wma,.ogg,.m4a,.flac";
+      const file = await new Promise((resolve) => {
+        picker.onchange = () => resolve(picker.files && picker.files[0]);
+        picker.click();
+      });
+      if (!file) return;
+      const targetIndex = Math.max(0, (targetSong.num || 1) - 1);
+      const nextSong = await parseSong(file, targetIndex);
+      replaceSongData(targetSong, nextSong);
+      renumber();
+      renderAll();
+      log(`已替换舞曲：${targetSong.title}`);
+      await syncSongsToDanceLibrary("替换舞曲");
     }
 
     function currentMeta() {
@@ -2848,7 +2906,7 @@
           log(err.message);
         }
       });
-      $("checkBtn").addEventListener("click", validateRules);
+      $("checkBtn").addEventListener("click", () => validateRules().catch(err => log(err.message)));
       $("addPartBtn").addEventListener("click", addPart);
       $("addSongBtn").addEventListener("click", () => addSong().catch(err => log(err.message)));
       $("downloadTxtBtn").addEventListener("click", () => download("舞曲列表.txt", buildTxt(), "text/plain;charset=utf-8"));
