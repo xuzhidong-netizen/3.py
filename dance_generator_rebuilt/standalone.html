@@ -1066,8 +1066,8 @@
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
-    const CLOUD_FULL_URL = "./web_static/1.24-top5.zip";
-    const CLOUD_FULL_ARCHIVE_NAME = "1.24-top5.zip";
+    const CLOUD_FULL_URL = "./web_static/full_sample_download.html";
+    const CLOUD_FULL_ARCHIVE_NAME = "1.24.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
     const GITHUB_ISSUES_URL = "https://github.com/xuzhidong-netizen/3.py/issues";
     const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`;
@@ -1179,6 +1179,14 @@
       return fallbackUrl;
     }
 
+    function isSameOriginUrl(url) {
+      try {
+        return new URL(url, window.location.href).origin === window.location.origin;
+      } catch (error) {
+        return false;
+      }
+    }
+
     function normalizeCloudTrack(track, playlistUrl) {
       if (!track || typeof track !== "object") {
         return track;
@@ -1187,6 +1195,18 @@
         ...track,
         audio_url: resolveCloudAssetUrl(track.audio_url, playlistUrl, "")
       };
+    }
+
+    function cloudTrackAssetName(track, index) {
+      const explicit = String(track?.asset_name || track?.source || "").trim();
+      if (explicit) return explicit;
+      try {
+        const pathname = new URL(track?.audio_url || "", window.location.href).pathname;
+        const fileName = pathname.split("/").pop() || "";
+        if (fileName) return decodeURIComponent(fileName);
+      } catch (error) {
+      }
+      return `示范舞曲-${String(index + 1).padStart(2, "0")}.mp3`;
     }
 
     function ensureStageChannel() {
@@ -1498,10 +1518,129 @@
       const retries = Math.max(1, Number(options.retries || 1));
       const connectTimeoutMs = normalizeTimeoutMs(options.connectTimeoutMs, 15000);
       const stallTimeoutMs = normalizeTimeoutMs(options.stallTimeoutMs, 12000);
-      const sourceLabel = options.sourceLabel || "远端压缩包";
+      const sourceLabel = options.sourceLabel || (isSameOriginUrl(archiveUrl) ? "站内压缩包" : "远端压缩包");
       const cacheMode = options.cacheMode || "default";
+      const preferXhr = Boolean(options.preferXhr);
+
+      const attemptXhrFetch = (targetUrl, attemptIndex) => new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let connectTimer = null;
+        let stallTimer = null;
+        let lastLoadedBytes = 0;
+        let nextUnboundedLog = 512 * 1024;
+
+        const clearTimers = () => {
+          if (connectTimer) window.clearTimeout(connectTimer);
+          if (stallTimer) window.clearTimeout(stallTimer);
+        };
+
+        const cleanup = () => {
+          clearTimers();
+          xhr.onload = null;
+          xhr.onerror = null;
+          xhr.onabort = null;
+          xhr.onreadystatechange = null;
+          xhr.onprogress = null;
+        };
+
+        const fail = (message) => {
+          cleanup();
+          try {
+            xhr.abort();
+          } catch (error) {
+          }
+          reject(new Error(message));
+        };
+
+        const armConnectTimeout = () => {
+          if (!connectTimeoutMs) return;
+          connectTimer = window.setTimeout(() => {
+            fail(`${label}压缩包连接超时，请稍后重试`);
+          }, connectTimeoutMs);
+        };
+
+        const armStallTimeout = () => {
+          if (!stallTimeoutMs) return;
+          if (stallTimer) window.clearTimeout(stallTimer);
+          stallTimer = window.setTimeout(() => {
+            fail(`${label}压缩包下载超时，请稍后重试`);
+          }, stallTimeoutMs);
+        };
+
+        const requestUrl = attemptIndex > 1
+          ? `${targetUrl}${String(targetUrl).includes("?") ? "&" : "?"}retry_ts=${Date.now()}`
+          : targetUrl;
+
+        xhr.open("GET", requestUrl, true);
+        xhr.responseType = "arraybuffer";
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState >= 2 && connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+            progress?.update(
+              18,
+              retries > 1
+                ? `已连接${sourceLabel} 第 ${attemptIndex}/${retries} 次`
+                : `已连接${sourceLabel}`
+            );
+          }
+        };
+        xhr.onprogress = (event) => {
+          if (connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+          }
+          armStallTimeout();
+          const loadedBytes = Number(event.loaded || 0);
+          const totalBytes = event.lengthComputable
+            ? Number(event.total || 0)
+            : Number(xhr.getResponseHeader("content-length")) || 0;
+          lastLoadedBytes = loadedBytes;
+          if (totalBytes > 0) {
+            const ratio = Math.min(loadedBytes / totalBytes, 1);
+            progress?.update(
+              18 + Math.round(ratio * 40),
+              `正在下载${sourceLabel} ${Math.round(ratio * 100)}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
+            );
+            return;
+          }
+          if (loadedBytes >= nextUnboundedLog) {
+            nextUnboundedLog += 512 * 1024;
+            progress?.update(38, `正在下载${sourceLabel} ${formatBytes(loadedBytes)}`);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            fail(`${label}压缩包读取失败`);
+            return;
+          }
+          const totalBytes = lastLoadedBytes || Number(xhr.getResponseHeader("content-length")) || 0;
+          cleanup();
+          progress?.update(
+            58,
+            totalBytes
+              ? `${sourceLabel}下载完成 ${formatBytes(totalBytes)}`
+              : `${sourceLabel}下载完成`
+          );
+          resolve(xhr.response);
+        };
+        xhr.onerror = () => fail(`${label}压缩包读取失败`);
+        xhr.onabort = () => fail(`${label}压缩包连接或下载中断，请稍后重试`);
+
+        armConnectTimeout();
+        progress?.update(
+          16,
+          retries > 1
+            ? `正在连接${sourceLabel} 第 ${attemptIndex}/${retries} 次`
+            : `正在连接${sourceLabel}`
+        );
+        xhr.send();
+      });
 
       const attemptFetch = async (targetUrl, attemptIndex) => {
+        if (preferXhr && typeof XMLHttpRequest === "function") {
+          return attemptXhrFetch(targetUrl, attemptIndex);
+        }
         const controller = new AbortController();
         let timeoutReason = "连接超时";
         let connectTimer = null;
@@ -3444,12 +3583,14 @@
       const progress = createProgressLogger(`${label}进度`);
       progress.update(5, "正在准备下载");
       try {
+        const sourceLabel = isSameOriginUrl(url) ? "站内压缩包" : "远端压缩包";
         const archiveBuffer = await fetchArchiveBuffer(url, label, progress, {
           retries: Math.max(1, Number(options.retries || 2)),
           connectTimeoutMs: normalizeTimeoutMs(options.connectTimeoutMs, 15000),
           stallTimeoutMs: normalizeTimeoutMs(options.stallTimeoutMs, 12000),
-          sourceLabel: "远端压缩包",
+          sourceLabel,
           cacheMode: options.cacheMode || "default",
+          preferXhr: Boolean(options.preferXhr),
         });
         progress.update(94, "正在生成浏览器下载文件");
         const blob = new Blob([archiveBuffer], { type: "application/zip" });
@@ -3464,6 +3605,78 @@
       }
     }
 
+    async function downloadCloudPlaylistBundle(config) {
+      const progress = createProgressLogger(config.progressLabel);
+      progress.update(5, "正在读取云端歌单");
+      try {
+        const response = await fetch(config.playlistUrl, { cache: config.cacheMode || "default" });
+        if (!response.ok) {
+          throw new Error(config.playlistErrorMessage);
+        }
+        const playlist = await response.json();
+        const resolvedPlaylistUrl = response.url || new URL(config.playlistUrl, window.location.href).toString();
+        const fallbackUrl = resolveCloudAssetUrl(playlist.download_url, resolvedPlaylistUrl, config.fallbackUrl || "");
+        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, resolvedPlaylistUrl)) : [];
+        const playableTracks = tracks.filter(track => track.audio_url);
+        if (!playableTracks.length) {
+          if (fallbackUrl) {
+            triggerDownload(fallbackUrl);
+            log(`${config.label}已改为打开原始文件下载页`);
+            progress.done("已打开原始文件下载页");
+            return;
+          }
+          throw new Error("云端歌单未提供可下载的原始文件");
+        }
+        if (typeof JSZip === "undefined") {
+          if (fallbackUrl) {
+            triggerDownload(fallbackUrl);
+            log("当前页面未加载打包模块，已改为打开原始文件下载页");
+            progress.done("已打开原始文件下载页");
+            return;
+          }
+          throw new Error("当前页面未加载浏览器打包模块");
+        }
+
+        const zip = new JSZip();
+        const folder = zip.folder(config.folderName || config.bundleName.replace(/\.zip$/i, "")) || zip;
+        let downloadedBytes = 0;
+        progress.update(12, `已读取歌单，共 ${playableTracks.length} 首原始舞曲`);
+        for (let index = 0; index < playableTracks.length; index += 1) {
+          const track = playableTracks[index];
+          const response = await fetch(track.audio_url, { cache: config.cacheMode || "default" });
+          if (!response.ok) {
+            throw new Error(`第 ${index + 1} 首原始舞曲下载失败`);
+          }
+          const blob = await response.blob();
+          downloadedBytes += blob.size || 0;
+          folder.file(cloudTrackAssetName(track, index), blob, { binary: true });
+          progress.update(
+            12 + Math.round(((index + 1) / playableTracks.length) * 56),
+            `正在下载原始舞曲 ${index + 1}/${playableTracks.length}，累计 ${formatBytes(downloadedBytes)}`
+          );
+        }
+
+        progress.update(74, "正在打包浏览器下载文件");
+        const blob = await zip.generateAsync(
+          {
+            type: "blob",
+            compression: "STORE",
+            streamFiles: true,
+          },
+          (metadata) => {
+            progress.update(74 + Math.round((Number(metadata.percent || 0) / 100) * 22), `正在打包浏览器下载文件 ${Math.round(Number(metadata.percent || 0))}%`);
+          }
+        );
+        const objectUrl = URL.createObjectURL(blob);
+        triggerDownload(objectUrl, config.bundleName);
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        progress.done(`已开始下载 ${config.bundleName}`);
+      } catch (error) {
+        progress.fail(error.message || error);
+        throw error;
+      }
+    }
+
     async function loadCloudPlaylist(config) {
       const progress = createProgressLogger(config.progressLabel);
       log(config.startMessage);
@@ -3474,13 +3687,14 @@
           throw new Error(config.playlistErrorMessage);
         }
         const playlist = await response.json();
+        const resolvedPlaylistUrl = response.url || new URL(config.playlistUrl, window.location.href).toString();
         progress.update(14, "云端歌单读取完成");
-        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, config.playlistUrl)) : [];
+        const tracks = Array.isArray(playlist.tracks) ? playlist.tracks.map(track => normalizeCloudTrack(track, resolvedPlaylistUrl)) : [];
         const playableTracks = tracks.filter(track => track.audio_url);
         if (!playableTracks.length) {
           await loadPlaylistArchive(
             playlist,
-            resolveCloudAssetUrl(playlist.download_url, config.playlistUrl, config.archiveUrl),
+            resolveCloudAssetUrl(playlist.download_url, resolvedPlaylistUrl, config.archiveUrl),
             config.archiveLabel,
             progress,
             {
@@ -3493,6 +3707,7 @@
               continueOnEntryError: Boolean(config.continueOnEntryError),
               fallbackDuration: config.fallbackDuration,
               durationTimeoutMs: config.durationTimeoutMs,
+              preferXhr: Boolean(config.preferXhr),
             }
           );
           progress.done(`已导入 ${allSongs().length} 首`);
@@ -3636,6 +3851,7 @@
         continueOnEntryError: true,
         fallbackDuration: CLOUD_FULL_FALLBACK_DURATION_SECONDS,
         durationTimeoutMs: 4000,
+        preferXhr: true,
       });
     }
 
@@ -3697,14 +3913,21 @@
       });
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
         log(`${err.message}，已为你打开全部示范舞曲下载链接`);
-        triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
+        triggerDownload(CLOUD_FULL_URL);
       }));
       $("downloadCloudFullBtn").addEventListener("click", () => {
-        downloadArchiveWithProgress(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲", {
-          retries: 6,
-          connectTimeoutMs: 0,
-          stallTimeoutMs: 0,
+        downloadCloudPlaylistBundle({
+          progressLabel: "下载全部示范舞曲进度",
+          label: "下载全部示范舞曲",
+          playlistUrl: CLOUD_FULL_PLAYLIST_URL,
+          playlistErrorMessage: "云端全部歌单读取失败",
+          fallbackUrl: CLOUD_FULL_URL,
+          bundleName: CLOUD_FULL_ARCHIVE_NAME,
+          folderName: "1.24",
           cacheMode: "default",
+        }).catch(err => {
+          log(`${err.message}，已为你打开全部示范舞曲原始文件下载页`);
+          triggerDownload(CLOUD_FULL_URL);
         });
       });
       $("libraryBtn").addEventListener("click", () => {

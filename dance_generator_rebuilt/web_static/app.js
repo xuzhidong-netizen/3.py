@@ -9,8 +9,8 @@ const PLACES = ["老年活动中心", "紫菘活动中心", "博士生之家", "
 const CLOUD_SAMPLE_URL = "/static/示范舞曲-top3.zip";
 const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
 const CLOUD_PLAYLIST_URL = "/static/cloud_sample.json";
-const CLOUD_FULL_URL = "/static/1.24-top5.zip";
-const CLOUD_FULL_ARCHIVE_NAME = "示范舞曲-top5.zip";
+const CLOUD_FULL_URL = "/static/web_static/full_sample_download.html";
+const CLOUD_FULL_ARCHIVE_NAME = "1.24.zip";
 const CLOUD_FULL_PLAYLIST_URL = "/static/cloud_full.json";
 
 const state = {
@@ -480,14 +480,14 @@ async function loadCloudFullSample() {
     const playlist = await response.json();
     const playableTracks = (playlist.tracks || []).filter((track) => track.audio_url);
     if (!playableTracks.length) {
-      log("云端全部歌单暂未配置单曲直链，已打开示范舞曲压缩包下载链接");
+      log("云端全部歌单暂未配置单曲直链，已打开原始文件下载页");
       triggerDownload(playlist.download_url || CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       return;
     }
-    log(`云端全部歌单已配置 ${playableTracks.length} 首可直播放舞曲，当前 Web 版后续可继续接入完整导入。`);
+    log(`云端全部歌单已配置 ${playableTracks.length} 首原始舞曲，已打开原始文件下载页。`);
     triggerDownload(playlist.download_url || CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
   } catch (error) {
-    log(`${error.message}，已打开示范舞曲压缩包下载链接`);
+    log(`${error.message}，已打开原始文件下载页`);
     triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
   }
 }

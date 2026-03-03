@@ -180,9 +180,9 @@ def test_cloud_full_load_uses_same_origin_assets_without_fetch_failure(browser, 
         page.locator("#loadCloudFullBtn").click()
         page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0", timeout=60000)
 
-        assert page.locator("#countStat").inner_text() == "5"
+        assert page.locator("#countStat").inner_text() == "49"
         log_entries = page.locator("#log .log-entry")
-        assert any("已从压缩包导入示范舞曲包 5 首" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
+        assert any("已导入云端全部示范舞曲 49 首" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
         assert not any("Failed to fetch" in log_entries.nth(index).inner_text() for index in range(log_entries.count()))
     finally:
         page.close()
@@ -208,6 +208,7 @@ def test_library_and_recognizer_pages_render_core_controls(browser, static_serve
     pages = [
         (f"{static_server}/web_static/library.html", "#groupFilter"),
         (f"{static_server}/web_static/recognizer.html", "#searchInput"),
+        (f"{static_server}/web_static/full_sample_download.html", "#downloadAllBtn"),
     ]
     for url, selector in pages:
         page = browser.new_page()

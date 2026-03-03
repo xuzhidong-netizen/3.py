@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>全部示范舞曲原始文件下载</title>
+  <style>
+    :root {
+      --bg: #f6efe8;
+      --panel: rgba(255, 252, 248, 0.88);
+      --text: #35261f;
+      --muted: #7a6157;
+      --line: rgba(139, 102, 83, 0.18);
+      --accent: #c96e36;
+      --accent-strong: #a54d1e;
+      --shadow: 0 24px 60px rgba(84, 47, 30, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.82), transparent 42%),
+        linear-gradient(160deg, #efe3d5 0%, #f7f0e9 46%, #f1e2d8 100%);
+    }
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 46px);
+      line-height: 1.1;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .actions a,
+    .actions button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      box-shadow: 0 16px 32px rgba(201, 110, 54, 0.24);
+    }
+    .actions .secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.9);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .grid {
+      margin-top: 22px;
+      padding: 22px 24px;
+      display: grid;
+      gap: 12px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 80px 90px minmax(0, 1fr) 220px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(139, 102, 83, 0.12);
+    }
+    .row strong {
+      font-size: 18px;
+    }
+    .row span {
+      min-width: 0;
+      word-break: break-word;
+    }
+    .row a {
+      justify-self: end;
+      text-decoration: none;
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+    #status {
+      margin-top: 6px;
+      color: var(--accent-strong);
+      font-size: 14px;
+    }
+    @media (max-width: 820px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+      .row a {
+        justify-self: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card hero">
+      <p>Original Full Sample Files</p>
+      <h1>全部示范舞曲原始文件下载</h1>
+      <p>这里直接列出当前上传到 GitHub 的 49 个原始音频文件。主页面里的“下载全部示范舞曲”会优先自动打包；如果浏览器内存或策略拦截，这一页可以作为稳定兜底。</p>
+      <div class="actions">
+        <a href="../standalone.html">返回主页面</a>
+        <button id="downloadAllBtn" type="button">逐个下载全部原文件</button>
+        <a class="secondary" href="./library.html">打开舞曲库</a>
+        <a class="secondary" href="./recognizer.html">打开舞曲识别</a>
+      </div>
+      <div class="meta">
+        <span id="countText">正在读取文件列表...</span>
+        <span>来源目录：<code>web_static/1.24</code></span>
+      </div>
+      <div id="status"></div>
+    </section>
+    <section class="card grid" id="listWrap"></section>
+  </main>
+  <script>
+    async function loadTracks() {
+      const response = await fetch("./cloud_full.json", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("读取全部歌单失败");
+      }
+      const payload = await response.json();
+      return Array.isArray(payload.tracks) ? payload.tracks : [];
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function renderTracks(tracks) {
+      document.getElementById("countText").textContent = `当前共 ${tracks.length} 个原始音频文件`;
+      const wrap = document.getElementById("listWrap");
+      wrap.innerHTML = tracks.map((track, index) => `
+        <article class="row">
+          <strong>${String(track.num || index + 1).padStart(2, "0")}</strong>
+          <span>${escapeHtml(track.dance || "未标注")}</span>
+          <span>${escapeHtml(track.title || track.asset_name || "未命名")} ${track.other ? `- ${escapeHtml(track.other)}` : ""}</span>
+          <a href="${escapeHtml(track.audio_url || "#")}" download="${escapeHtml(track.asset_name || "")}">下载原文件</a>
+        </article>
+      `).join("");
+    }
+
+    async function downloadAllSequentially(tracks) {
+      const status = document.getElementById("status");
+      for (let index = 0; index < tracks.length; index += 1) {
+        const track = tracks[index];
+        status.textContent = `正在触发下载 ${index + 1}/${tracks.length}：${track.asset_name || track.title || "未命名"}`;
+        const link = document.createElement("a");
+        link.href = track.audio_url || "#";
+        link.download = track.asset_name || "";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+      }
+      status.textContent = "已按顺序触发全部原文件下载；如果浏览器拦截了多文件下载，请允许该站点继续下载。";
+    }
+
+    let currentTracks = [];
+    loadTracks().then((tracks) => {
+      currentTracks = tracks.filter((track) => track && track.audio_url);
+      renderTracks(currentTracks);
+    }).catch((error) => {
+      document.getElementById("countText").textContent = error.message || String(error);
+    });
+
+    document.getElementById("downloadAllBtn").addEventListener("click", () => {
+      if (!currentTracks.length) {
+        document.getElementById("status").textContent = "当前没有可下载的原始文件。";
+        return;
+      }
+      downloadAllSequentially(currentTracks).catch((error) => {
+        document.getElementById("status").textContent = error.message || String(error);
+      });
+    });
+  </script>
+</body>
+</html>

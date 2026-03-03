@@ -14,6 +14,7 @@
 !dance_generator_rebuilt/standalone.html
 !dance_generator_rebuilt/web_static/library.html
 !dance_generator_rebuilt/web_static/recognizer.html
+!dance_generator_rebuilt/web_static/full_sample_download.html
 /.idea
 /.vscode
 /cache
