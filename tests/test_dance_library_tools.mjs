@@ -59,6 +59,19 @@ function loadTools(overrides = {}) {
   return context.DanceLibraryTools;
 }
 
+function mockJsonResponse(status, payload, headers = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get(name) {
+        return headers[String(name || "").toLowerCase()] ?? headers[name] ?? "";
+      },
+    },
+    json: async () => payload,
+  };
+}
+
 test("parseSongFileName strips choose suffix and extracts dance", () => {
   const tools = loadTools();
 
@@ -236,7 +249,11 @@ test("probeBackendAvailability reports failure when static page has no backend",
 
 test("saveLibraryData surfaces friendly message for token permission errors", async () => {
   const storage = new Map();
+  let step = 0;
   const tools = loadTools({
+    location: {
+      href: "file:///tmp/library.html",
+    },
     localStorage: {
       getItem(key) {
         return storage.has(key) ? storage.get(key) : null;
@@ -249,26 +266,35 @@ test("saveLibraryData surfaces friendly message for token permission errors", as
       },
     },
     fetch: async (url, options = {}) => {
-      if (!options.method) {
-        return {
-          ok: true,
-          json: async () => ({
-            sha: "sha-1",
-            content: Buffer.from(JSON.stringify({
-              version: 1,
-              updated_at: "2026-03-03T10:00:00Z",
-              songs: [],
-            })).toString("base64"),
-          }),
-        };
+      step += 1;
+      if (step === 1) {
+        return mockJsonResponse(200, {
+          sha: "sha-1",
+          content: Buffer.from(JSON.stringify({
+            version: 1,
+            updated_at: "2026-03-03T10:00:00Z",
+            songs: [],
+          })).toString("base64"),
+        });
       }
-      return {
-        ok: false,
-        status: 403,
-        json: async () => ({
+      if (step === 2) {
+        return mockJsonResponse(403, {
           message: "Resource not accessible by personal access token",
-        }),
-      };
+        });
+      }
+      if (url === "https://api.github.com/repos/xuzhidong-netizen/3.py") {
+        return mockJsonResponse(200, {
+          permissions: { push: true },
+        });
+      }
+      return mockJsonResponse(200, {
+        sha: "sha-1",
+        content: Buffer.from(JSON.stringify({
+          version: 1,
+          updated_at: "2026-03-03T10:00:00Z",
+          songs: [],
+        })).toString("base64"),
+      });
     },
   });
   tools.setGitHubToken("github_pat_test");
@@ -279,6 +305,51 @@ test("saveLibraryData surfaces friendly message for token permission errors", as
       updated_at: "2026-03-03T10:00:00Z",
       songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
     }),
-    /Contents: Read and write 权限/,
+    /Contents: Read only/,
   );
+});
+
+test("inspectGitHubToken reports repo selection issues clearly", async () => {
+  const tools = loadTools({
+    fetch: async (url) => {
+      assert.equal(url, "https://api.github.com/repos/xuzhidong-netizen/3.py");
+      return mockJsonResponse(404, {
+        message: "Not Found",
+      });
+    },
+  });
+
+  const result = await tools.inspectGitHubToken("github_pat_test");
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "repo_not_selected");
+  assert.match(result.message, /看不到仓库 xuzhidong-netizen\/3\.py/);
+});
+
+test("inspectGitHubToken reports classic token repo scope problems", async () => {
+  const tools = loadTools({
+    fetch: async (url) => {
+      if (url === "https://api.github.com/repos/xuzhidong-netizen/3.py") {
+        return mockJsonResponse(200, {
+          permissions: { push: true },
+        }, {
+          "x-oauth-scopes": "read:user, user:email",
+        });
+      }
+      return mockJsonResponse(200, {
+        sha: "sha-1",
+        content: Buffer.from(JSON.stringify({
+          version: 1,
+          updated_at: "2026-03-03T10:00:00Z",
+          songs: [],
+        })).toString("base64"),
+      });
+    },
+  });
+
+  const result = await tools.inspectGitHubToken("ghp_test");
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "classic_scope_missing");
+  assert.match(result.message, /缺少 repo scope/);
 });

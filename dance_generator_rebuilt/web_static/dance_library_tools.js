@@ -16,6 +16,7 @@
     branch: "main",
     path: "dance_generator_rebuilt/web_static/dance_library.json",
   };
+  const REPO_URL = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}`;
   const CONTENTS_URL = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path.split("/").map(encodeURIComponent).join("/")}`;
   const RAW_URL = `https://raw.githubusercontent.com/${GITHUB.owner}/${GITHUB.repo}/${GITHUB.branch}/${GITHUB.path}`;
   const REQUEST_TIMEOUT_MS = 20000;
@@ -205,6 +206,29 @@
 
   function clearGitHubToken() {
     global.localStorage.removeItem(TOKEN_KEY);
+  }
+
+  function buildGitHubAuthHeaders(token) {
+    return {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${String(token || "").trim()}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+    };
+  }
+
+  function getResponseHeader(response, name) {
+    try {
+      return String(response?.headers?.get?.(name) || "").trim();
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function parseScopesHeader(value) {
+    return String(value || "")
+      .split(",")
+      .map((scope) => scope.trim())
+      .filter(Boolean);
   }
 
   function openPopup(url, name) {
@@ -452,6 +476,134 @@
     }
   }
 
+  async function inspectGitHubToken(token = getGitHubToken()) {
+    const normalizedToken = String(token || "").trim();
+    if (!normalizedToken) {
+      return {
+        ok: false,
+        code: "missing",
+        repo: `${GITHUB.owner}/${GITHUB.repo}`,
+        branch: GITHUB.branch,
+        path: GITHUB.path,
+        canReadRepo: false,
+        canReadContents: false,
+        canPushRepo: false,
+        tokenKind: "unknown",
+        oauthScopes: [],
+        acceptedScopes: [],
+        message: "当前浏览器未保存 GitHub Token，请先填写后再检测。",
+      };
+    }
+
+    const authHeaders = buildGitHubAuthHeaders(normalizedToken);
+    const tokenKind = normalizedToken.startsWith("github_pat_") ? "fine-grained" : "classic-or-other";
+    const result = {
+      ok: false,
+      code: "unknown",
+      repo: `${GITHUB.owner}/${GITHUB.repo}`,
+      branch: GITHUB.branch,
+      path: GITHUB.path,
+      canReadRepo: false,
+      canReadContents: false,
+      canPushRepo: false,
+      tokenKind,
+      oauthScopes: [],
+      acceptedScopes: [],
+      message: "",
+    };
+
+    let repoResponse = null;
+    try {
+      repoResponse = await fetchWithTimeout(REPO_URL, {
+        headers: authHeaders,
+        cache: "no-store",
+      });
+    } catch (error) {
+      result.code = "network_error";
+      result.message = `检测 GitHub Token 时网络异常：${error?.message || String(error)}`;
+      return result;
+    }
+
+    const repoPayload = await safeJson(repoResponse);
+    result.oauthScopes = parseScopesHeader(getResponseHeader(repoResponse, "x-oauth-scopes"));
+    result.acceptedScopes = parseScopesHeader(getResponseHeader(repoResponse, "x-accepted-oauth-scopes"));
+
+    if (!repoResponse.ok) {
+      const repoMessage = String(repoPayload?.message || "").trim();
+      if (repoResponse.status === 401 || /bad credentials/i.test(repoMessage)) {
+        result.code = "invalid_token";
+        result.message = "当前 GitHub Token 无效、已过期，或已被撤销，请重新生成后再保存。";
+        return result;
+      }
+      if (repoResponse.status === 404 || /not found/i.test(repoMessage)) {
+        result.code = "repo_not_selected";
+        result.message = `当前 GitHub Token 看不到仓库 ${GITHUB.owner}/${GITHUB.repo}。请在 Token 里明确选择该仓库后再重试。`;
+        return result;
+      }
+      if (/resource not accessible by personal access token/i.test(repoMessage)) {
+        result.code = "repo_access_denied";
+        result.message = `当前 GitHub Token 无法访问仓库 ${GITHUB.owner}/${GITHUB.repo}。请确认该 Token 已选择仓库 ${GITHUB.owner}/${GITHUB.repo}。`;
+        return result;
+      }
+      result.code = "repo_request_failed";
+      result.message = repoMessage || `检测 GitHub Token 失败：${repoResponse.status}`;
+      return result;
+    }
+
+    result.canReadRepo = true;
+    const permissions = repoPayload?.permissions || {};
+    result.canPushRepo = Boolean(permissions.push || permissions.maintain || permissions.admin);
+    if (permissions && Object.keys(permissions).length && !result.canPushRepo) {
+      result.code = "no_push_permission";
+      result.message = `当前 GitHub 账号对仓库 ${GITHUB.owner}/${GITHUB.repo} 没有写入权限，请确认该账号至少具备 push 权限。`;
+      return result;
+    }
+
+    let contentsResponse = null;
+    try {
+      contentsResponse = await fetchWithTimeout(`${CONTENTS_URL}?ref=${encodeURIComponent(GITHUB.branch)}`, {
+        headers: authHeaders,
+        cache: "no-store",
+      });
+    } catch (error) {
+      result.code = "network_error";
+      result.message = `检测舞曲库文件权限时网络异常：${error?.message || String(error)}`;
+      return result;
+    }
+
+    const contentsPayload = await safeJson(contentsResponse);
+    if (!contentsResponse.ok && contentsResponse.status !== 404) {
+      const contentsMessage = String(contentsPayload?.message || "").trim();
+      if (contentsResponse.status === 401 || /bad credentials/i.test(contentsMessage)) {
+        result.code = "invalid_token";
+        result.message = "当前 GitHub Token 无效、已过期，或已被撤销，请重新生成后再保存。";
+        return result;
+      }
+      if (/resource not accessible by personal access token/i.test(contentsMessage)) {
+        result.code = "contents_read_denied";
+        result.message = `当前 GitHub Token 无法读取 ${GITHUB.path}。请确认已选择仓库 ${GITHUB.owner}/${GITHUB.repo}，并至少开启 Contents: Read 权限。`;
+        return result;
+      }
+      result.code = "contents_request_failed";
+      result.message = contentsMessage || `读取 ${GITHUB.path} 失败：${contentsResponse.status}`;
+      return result;
+    }
+
+    result.canReadContents = true;
+    if (tokenKind === "classic-or-other" && result.oauthScopes.length && !result.oauthScopes.includes("repo")) {
+      result.code = "classic_scope_missing";
+      result.message = "当前 classic GitHub Token 缺少 repo scope，无法写入仓库文件，请重新生成并勾选 repo。";
+      return result;
+    }
+
+    result.ok = true;
+    result.code = "ready";
+    result.message = result.canPushRepo
+      ? `当前 GitHub Token 已能读取仓库 ${GITHUB.owner}/${GITHUB.repo} 和舞曲库文件。若保存时仍被 GitHub 拒绝写入，通常是 Token 只开了 Contents: Read only，需要改成 Read and write。`
+      : `当前 GitHub Token 已能读取仓库 ${GITHUB.owner}/${GITHUB.repo} 和舞曲库文件。`;
+    return result;
+  }
+
   function decodeBase64Utf8(value) {
     const binary = global.atob(String(value || "").replace(/\s+/g, ""));
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
@@ -472,10 +624,24 @@
     return response?.status === 409 || /does not match/i.test(message);
   }
 
-  function explainGitHubTokenError(response, payload, fallbackMessage) {
+  function explainGitHubTokenError(response, payload, fallbackMessage, tokenCheck = null) {
     const status = Number(response?.status || 0);
     const message = String(payload?.message || "").trim();
     if (/resource not accessible by personal access token/i.test(message)) {
+      if (tokenCheck?.code === "repo_not_selected" || tokenCheck?.code === "repo_access_denied") {
+        return new Error(tokenCheck.message);
+      }
+      if (tokenCheck?.code === "classic_scope_missing") {
+        return new Error(tokenCheck.message);
+      }
+      if (tokenCheck?.code === "no_push_permission") {
+        return new Error(tokenCheck.message);
+      }
+      if (tokenCheck?.canReadContents) {
+        return new Error(
+          `当前 GitHub Token 已能读取仓库 ${GITHUB.owner}/${GITHUB.repo}，但 GitHub 仍拒绝写入 ${GITHUB.path}。这通常表示该 Token 只有 Contents: Read only，请改成 Contents: Read and write 后再试。`
+        );
+      }
       return new Error(
         `当前 GitHub Token 无法写入 ${GITHUB.owner}/${GITHUB.repo}。请确认该 Token 已选择仓库 ${GITHUB.owner}/${GITHUB.repo}，并开启 Contents: Read and write 权限。`
       );
@@ -520,11 +686,7 @@
       throw new Error("请先填写带 Contents 写权限的 GitHub Token。");
     }
 
-    const authHeaders = {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-    };
+    const authHeaders = buildGitHubAuthHeaders(token);
 
     const requestedData = normalizeLibraryData(data);
 
@@ -540,7 +702,8 @@
         remoteData = parseGitHubLibraryContent(currentData);
       } else if (currentResponse.status !== 404) {
         const errorData = await safeJson(currentResponse);
-        throw explainGitHubTokenError(currentResponse, errorData, "读取 GitHub 上的舞曲库失败。");
+        const tokenCheck = await inspectGitHubToken(token);
+        throw explainGitHubTokenError(currentResponse, errorData, "读取 GitHub 上的舞曲库失败。", tokenCheck);
       }
 
       const normalized = attempt === 0 ? requestedData : combineLibraryData(remoteData, requestedData);
@@ -573,7 +736,8 @@
       if (attempt < SAVE_RETRY_LIMIT && isShaMismatch(saveResponse, saveData)) {
         continue;
       }
-      throw explainGitHubTokenError(saveResponse, saveData, "保存到 GitHub 失败。");
+      const tokenCheck = await inspectGitHubToken(token);
+      throw explainGitHubTokenError(saveResponse, saveData, "保存到 GitHub 失败。", tokenCheck);
     }
 
     throw new Error("保存到 GitHub 失败，请稍后重试。");
@@ -665,6 +829,7 @@
     normalizeSearchText,
     openGitHubLoginWindow,
     openGitHubTokenWindow,
+    inspectGitHubToken,
     probeBackendAvailability,
     parseSongFileName,
     queryLibrarySongs,

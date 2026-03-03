@@ -452,6 +452,7 @@
           </div>
           <div class="settings-actions">
             <button id="loginGitHubBtn" type="button">GitHub 登录</button>
+            <button id="checkTokenBtn" type="button">检测令牌</button>
             <button id="saveTokenBtn" type="button">保存令牌</button>
             <button id="clearTokenBtn" type="button">清除令牌</button>
             <span id="tokenState" class="token-state">尚未保存 GitHub Token</span>
@@ -506,6 +507,7 @@
   <script src="./dance_library_tools.js"></script>
   <script>
     const tools = window.DanceLibraryTools;
+    const PENDING_CACHE_KEY = "dance-library-pending-upload-v1";
     const state = {
       data: tools.defaultLibraryData(),
       pending: [],
@@ -533,6 +535,7 @@
       refreshBtn: document.getElementById("refreshBtn"),
       tokenInput: document.getElementById("tokenInput"),
       loginGitHubBtn: document.getElementById("loginGitHubBtn"),
+      checkTokenBtn: document.getElementById("checkTokenBtn"),
       saveTokenBtn: document.getElementById("saveTokenBtn"),
       clearTokenBtn: document.getElementById("clearTokenBtn"),
       tokenState: document.getElementById("tokenState"),
@@ -564,6 +567,40 @@
     function setStatus(message, tone) {
       els.statusBar.dataset.tone = tone || "neutral";
       els.statusBar.textContent = message;
+    }
+
+    function normalizePendingEntry(item) {
+      return {
+        fileName: String(item?.fileName || ""),
+        title: String(item?.title || ""),
+        dance: String(item?.dance || ""),
+        group: String(item?.group || ""),
+        valid: Boolean(item?.valid),
+        reason: String(item?.reason || ""),
+      };
+    }
+
+    function cachePendingEntries() {
+      try {
+        window.localStorage.setItem(PENDING_CACHE_KEY, JSON.stringify(state.pending.map(normalizePendingEntry)));
+      } catch (error) {
+      }
+    }
+
+    function clearPendingEntriesCache() {
+      try {
+        window.localStorage.removeItem(PENDING_CACHE_KEY);
+      } catch (error) {
+      }
+    }
+
+    function readPendingEntriesCache() {
+      try {
+        const payload = JSON.parse(window.localStorage.getItem(PENDING_CACHE_KEY) || "[]");
+        return Array.isArray(payload) ? payload.map(normalizePendingEntry).filter((item) => item.fileName) : [];
+      } catch (error) {
+        return [];
+      }
     }
 
     function updateTokenState() {
@@ -772,9 +809,37 @@
           reason: valid ? "" : "无法提取舞种或舞曲名",
         };
       });
+      cachePendingEntries();
       renderAll();
       const validCount = state.pending.filter((item) => item.valid).length;
       setStatus(`已读取 ${state.pending.length} 个文件，其中 ${validCount} 个可写入舞曲库。`, "success");
+    }
+
+    async function checkTokenAccess() {
+      if (state.busy) return;
+      const typedToken = els.tokenInput.value.trim();
+      const token = typedToken || tools.getGitHubToken();
+      if (!token) {
+        setStatus("请先填写 GitHub Token 后再检测。", "error");
+        return;
+      }
+      state.busy = true;
+      els.checkTokenBtn.textContent = "检测中...";
+      els.checkTokenBtn.disabled = true;
+      try {
+        const result = await tools.inspectGitHubToken(token);
+        if (result.ok) {
+          setStatus(result.message, "success");
+        } else {
+          setStatus(result.message || "GitHub Token 检测失败。", "error");
+        }
+      } catch (error) {
+        setStatus(error.message || "GitHub Token 检测失败。", "error");
+      } finally {
+        state.busy = false;
+        els.checkTokenBtn.textContent = "检测令牌";
+        els.checkTokenBtn.disabled = false;
+      }
     }
 
     async function savePendingEntries() {
@@ -799,6 +864,7 @@
         state.librarySource = result.source || state.librarySource;
         state.data = result.data;
         state.pending = [];
+        clearPendingEntriesCache();
         els.uploadInput.value = "";
         els.tokenInput.value = "";
         renderAll();
@@ -810,7 +876,8 @@
             : "已通过当前浏览器保存到 GitHub";
         setStatus(`${sourceText}，新增 ${merged.added} 首，更新 ${merged.updated} 首。${retryText}`, "success");
       } catch (error) {
-        setStatus(error.message || "保存到 GitHub 失败。", "error");
+        cachePendingEntries();
+        setStatus(`${error.message || "保存到 GitHub 失败。"} 当前待保存条目已保存在当前浏览器，可修正 Token 后直接重试。`, "error");
       } finally {
         state.busy = false;
         els.saveBtn.textContent = "保存到 GitHub";
@@ -849,6 +916,10 @@
         return;
       }
       setStatus("已打开 GitHub 登录窗口，登录后会跳到 Token 创建页。", "success");
+    });
+
+    els.checkTokenBtn.addEventListener("click", () => {
+      checkTokenAccess();
     });
 
     els.clearTokenBtn.addEventListener("click", () => {
@@ -912,8 +983,13 @@
       };
     }
 
+    state.pending = readPendingEntriesCache();
     renderAll();
-    refreshLibrary(false);
+    if (state.pending.length) {
+      const validCount = state.pending.filter((item) => item.valid).length;
+      setStatus(`已恢复上次未保存的 ${state.pending.length} 个条目，其中 ${validCount} 个可直接保存。`, "neutral");
+    }
+    refreshLibrary(state.pending.length > 0);
   </script>
 </body>
 </html>

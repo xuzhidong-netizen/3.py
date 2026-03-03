@@ -246,6 +246,8 @@ def test_library_and_recognizer_pages_render_core_controls(browser, static_serve
             page.goto(url)
             page.wait_for_selector(selector)
             assert page.locator("text=返回主页面").count() >= 1
+            if "library.html" in url:
+                assert page.locator("#checkTokenBtn").count() == 1
             if selector == "#downloadZipBtn":
                 assert page.locator("#downloadAllBtn").count() == 1
         finally:
