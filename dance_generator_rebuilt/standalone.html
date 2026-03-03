@@ -837,8 +837,10 @@
             <p class="group-label">导入与校验</p>
             <div class="control-buttons">
               <button class="primary" id="loadBtn">读取舞曲</button>
-              <button id="loadCloudBtn">加载/下载前3首示例</button>
-              <button id="loadCloudFullBtn">加载/下载全部示范舞曲</button>
+              <button id="loadCloudBtn">加载云端前3首示例</button>
+              <button id="downloadCloudBtn">下载前3首示例舞曲</button>
+              <button id="loadCloudFullBtn">加载云端全部示范舞曲</button>
+              <button id="downloadCloudFullBtn">下载全部示范舞曲</button>
               <button id="checkBtn">检查排曲</button>
             </div>
           </div>
@@ -1008,12 +1010,12 @@
     const COLLECTIVE = ["青春16步", "花火16步", "32步", "64步", "兔子舞", "集体恰恰", "阿拉伯之夜", "马卡琳娜", "玛卡琳娜", "蒙古舞"];
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
-    const CLOUD_SAMPLE_URL = "./web_static/示范舞曲-top3.zip";
+    const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
-    const CLOUD_PLAYLIST_URL = "./cloud_sample.json";
-    const CLOUD_FULL_URL = "./web_static/1.24-top5.zip";
-    const CLOUD_FULL_ARCHIVE_NAME = "示范舞曲-top5.zip";
-    const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
+    const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
+    const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
+    const CLOUD_FULL_ARCHIVE_NAME = "1.24.zip";
+    const CLOUD_FULL_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_full.json";
     const GITHUB_ISSUES_URL = "https://github.com/xuzhidong-netizen/3.py/issues";
     const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`;
     const libraryTools = window.DanceLibraryTools || null;
@@ -1325,7 +1327,12 @@
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
-      const response = await fetch(archiveUrl, { cache: "no-store" });
+      let response;
+      try {
+        response = await fetch(archiveUrl, { cache: "no-store" });
+      } catch (error) {
+        throw new Error(`${label}压缩包无法直接读取，请点击下载按钮`);
+      }
       if (!response.ok) {
         throw new Error(`${label}压缩包读取失败`);
       }
@@ -3247,13 +3254,21 @@
       els.clearFileInputBtn.addEventListener("click", () => clearImportSelection(els.fileInput, "舞曲目录"));
       els.clearArchiveInputBtn.addEventListener("click", () => clearImportSelection(els.archiveInput, "ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
-        log(`${err.message}，已为你下载前3首示范舞曲压缩包`);
+        log(`${err.message}，已为你打开前3首示例舞曲下载链接`);
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
       }));
+      $("downloadCloudBtn").addEventListener("click", () => {
+        log("已打开前3首示例舞曲下载链接");
+        triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
+      });
       $("loadCloudFullBtn").addEventListener("click", () => loadCloudFullSample().catch(err => {
-        log(`${err.message}，已为你下载示范舞曲压缩包`);
+        log(`${err.message}，已为你打开全部示范舞曲下载链接`);
         triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
       }));
+      $("downloadCloudFullBtn").addEventListener("click", () => {
+        log("已打开全部示范舞曲下载链接");
+        triggerDownload(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME);
+      });
       $("libraryBtn").addEventListener("click", () => {
         try {
           openLibraryView();

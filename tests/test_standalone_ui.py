@@ -71,6 +71,10 @@ def test_import_clear_buttons_reset_picker_values(browser, static_server):
     page = browser.new_page()
     try:
         page.goto(f"{static_server}/standalone.html")
+        assert page.locator("#loadCloudBtn").inner_text() == "加载云端前3首示例"
+        assert page.locator("#downloadCloudBtn").inner_text() == "下载前3首示例舞曲"
+        assert page.locator("#loadCloudFullBtn").inner_text() == "加载云端全部示范舞曲"
+        assert page.locator("#downloadCloudFullBtn").inner_text() == "下载全部示范舞曲"
         page.evaluate(
             """
             () => {
