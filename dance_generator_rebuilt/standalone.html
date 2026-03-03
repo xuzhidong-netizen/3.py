@@ -1900,6 +1900,251 @@
       throw lastError || new Error(`${label}压缩包读取失败`);
     }
 
+    async function fetchBlobWithProgress(targetUrl, label, options = {}) {
+      const retries = Math.max(1, Number(options.retries || 1));
+      const connectTimeoutMs = normalizeTimeoutMs(options.connectTimeoutMs, 15000);
+      const stallTimeoutMs = normalizeTimeoutMs(options.stallTimeoutMs, 12000);
+      const cacheMode = options.cacheMode || "default";
+      const progressStepBytes = Math.max(128 * 1024, Number(options.progressStepBytes || 256 * 1024));
+      const unboundedEstimateBytes = Math.max(
+        progressStepBytes * 4,
+        Number(options.unboundedEstimateBytes || (4 * 1024 * 1024))
+      );
+      const onStartAttempt = typeof options.onStartAttempt === "function" ? options.onStartAttempt : null;
+      const onConnected = typeof options.onConnected === "function" ? options.onConnected : null;
+      const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
+      const onRetry = typeof options.onRetry === "function" ? options.onRetry : null;
+      const onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
+      const preferXhr = Boolean(options.preferXhr);
+
+      const buildProgressPayload = (loadedBytes, totalBytes, attemptIndex) => {
+        const boundedTotalBytes = Number(totalBytes || 0);
+        const boundedLoadedBytes = Number(loadedBytes || 0);
+        const ratio = boundedTotalBytes > 0
+          ? Math.min(boundedLoadedBytes / boundedTotalBytes, 1)
+          : Math.min(boundedLoadedBytes / unboundedEstimateBytes, 0.92);
+        return {
+          attemptIndex,
+          retries,
+          loadedBytes: boundedLoadedBytes,
+          totalBytes: boundedTotalBytes,
+          ratio,
+          isEstimated: boundedTotalBytes <= 0,
+        };
+      };
+
+      const attemptXhrFetch = (resourceUrl, attemptIndex) => new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let connectTimer = null;
+        let stallTimer = null;
+        let lastLoadedBytes = 0;
+        let lastTotalBytes = 0;
+        let nextProgressBytes = progressStepBytes;
+
+        const clearTimers = () => {
+          if (connectTimer) window.clearTimeout(connectTimer);
+          if (stallTimer) window.clearTimeout(stallTimer);
+        };
+
+        const cleanup = () => {
+          clearTimers();
+          xhr.onload = null;
+          xhr.onerror = null;
+          xhr.onabort = null;
+          xhr.onreadystatechange = null;
+          xhr.onprogress = null;
+        };
+
+        const fail = (message) => {
+          cleanup();
+          try {
+            xhr.abort();
+          } catch (error) {
+          }
+          reject(new Error(message));
+        };
+
+        const armConnectTimeout = () => {
+          if (!connectTimeoutMs) return;
+          connectTimer = window.setTimeout(() => {
+            fail(`${label}连接超时，请稍后重试`);
+          }, connectTimeoutMs);
+        };
+
+        const armStallTimeout = () => {
+          if (!stallTimeoutMs) return;
+          if (stallTimer) window.clearTimeout(stallTimer);
+          stallTimer = window.setTimeout(() => {
+            fail(`${label}下载超时，请稍后重试`);
+          }, stallTimeoutMs);
+        };
+
+        const requestUrl = attemptIndex > 1
+          ? `${resourceUrl}${String(resourceUrl).includes("?") ? "&" : "?"}retry_ts=${Date.now()}`
+          : resourceUrl;
+
+        xhr.open("GET", requestUrl, true);
+        xhr.responseType = "blob";
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState >= 2 && connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+            onConnected?.({ attemptIndex, retries });
+          }
+        };
+        xhr.onprogress = (event) => {
+          if (connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+            onConnected?.({ attemptIndex, retries });
+          }
+          armStallTimeout();
+          lastLoadedBytes = Number(event.loaded || 0);
+          lastTotalBytes = event.lengthComputable
+            ? Number(event.total || 0)
+            : Number(xhr.getResponseHeader("content-length")) || 0;
+          if (lastTotalBytes > 0 || lastLoadedBytes >= nextProgressBytes) {
+            if (lastTotalBytes <= 0) {
+              nextProgressBytes += progressStepBytes;
+            }
+            onProgress?.(buildProgressPayload(lastLoadedBytes, lastTotalBytes, attemptIndex));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            fail(`${label}读取失败`);
+            return;
+          }
+          const blob = xhr.response instanceof Blob ? xhr.response : new Blob([xhr.response]);
+          cleanup();
+          onComplete?.(
+            buildProgressPayload(
+              lastLoadedBytes || blob.size || 0,
+              lastTotalBytes || blob.size || 0,
+              attemptIndex
+            )
+          );
+          resolve(blob);
+        };
+        xhr.onerror = () => fail(`${label}读取失败`);
+        xhr.onabort = () => fail(`${label}连接或下载中断，请稍后重试`);
+
+        onStartAttempt?.({ attemptIndex, retries });
+        armConnectTimeout();
+        xhr.send();
+      });
+
+      const attemptFetch = async (resourceUrl, attemptIndex) => {
+        if (preferXhr && typeof XMLHttpRequest === "function") {
+          return attemptXhrFetch(resourceUrl, attemptIndex);
+        }
+        const controller = new AbortController();
+        let timeoutReason = "连接超时";
+        let connectTimer = null;
+        let stallTimer = null;
+
+        const clearTimers = () => {
+          if (connectTimer) window.clearTimeout(connectTimer);
+          if (stallTimer) window.clearTimeout(stallTimer);
+        };
+
+        const armConnectTimeout = () => {
+          if (!connectTimeoutMs) return;
+          connectTimer = window.setTimeout(() => {
+            timeoutReason = "连接超时";
+            controller.abort();
+          }, connectTimeoutMs);
+        };
+
+        const armStallTimeout = () => {
+          if (!stallTimeoutMs) return;
+          if (stallTimer) window.clearTimeout(stallTimer);
+          stallTimer = window.setTimeout(() => {
+            timeoutReason = "下载超时";
+            controller.abort();
+          }, stallTimeoutMs);
+        };
+
+        try {
+          onStartAttempt?.({ attemptIndex, retries });
+          armConnectTimeout();
+          const response = await fetch(resourceUrl, {
+            cache: attemptIndex > 1 ? "reload" : cacheMode,
+            signal: controller.signal,
+          });
+          if (connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+          }
+          if (!response.ok) {
+            throw new Error(`${label}读取失败`);
+          }
+          onConnected?.({ attemptIndex, retries });
+
+          const totalBytes = Number(response.headers.get("content-length")) || 0;
+          if (!response.body || typeof response.body.getReader !== "function") {
+            const blob = await response.blob();
+            onComplete?.(buildProgressPayload(blob.size || totalBytes, totalBytes || blob.size || 0, attemptIndex));
+            return blob;
+          }
+
+          const reader = response.body.getReader();
+          const chunks = [];
+          const chunkLengths = [];
+          let receivedBytes = 0;
+          let nextProgressBytes = progressStepBytes;
+          armStallTimeout();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (!value) continue;
+            armStallTimeout();
+            chunks.push(value);
+            chunkLengths.push(value.byteLength);
+            receivedBytes += value.byteLength;
+            if (totalBytes > 0 || receivedBytes >= nextProgressBytes) {
+              if (totalBytes <= 0) {
+                nextProgressBytes += progressStepBytes;
+              }
+              onProgress?.(buildProgressPayload(receivedBytes, totalBytes, attemptIndex));
+            }
+          }
+
+          const merged = new Uint8Array(receivedBytes);
+          let offset = 0;
+          chunks.forEach((chunk, index) => {
+            merged.set(chunk, offset);
+            offset += chunkLengths[index];
+          });
+          const blob = new Blob([merged]);
+          onComplete?.(buildProgressPayload(receivedBytes || blob.size, totalBytes || blob.size || 0, attemptIndex));
+          clearTimers();
+          return blob;
+        } finally {
+          clearTimers();
+        }
+      };
+
+      let lastError = null;
+      for (let attemptIndex = 1; attemptIndex <= retries; attemptIndex += 1) {
+        try {
+          return await attemptFetch(targetUrl, attemptIndex);
+        } catch (error) {
+          lastError = error;
+          if (attemptIndex >= retries) break;
+          const waitMs = Math.min(4000, 800 * attemptIndex);
+          onRetry?.({ attemptIndex, retries, waitMs, error });
+          await delay(waitMs);
+        }
+      }
+
+      if (lastError?.name === "AbortError") {
+        throw new Error(`${label}连接或下载超时，请稍后重试`);
+      }
+      throw lastError || new Error(`${label}读取失败`);
+    }
+
     async function loadPlaylistArchive(playlist, archiveUrl, label, progress = null, options = {}) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
@@ -3821,16 +4066,64 @@
         progress.update(12, `已读取歌单，共 ${playableTracks.length} 首原始舞曲`);
         for (let index = 0; index < playableTracks.length; index += 1) {
           const track = playableTracks[index];
-          const response = await fetch(track.audio_url, { cache: config.cacheMode || "default" });
-          if (!response.ok) {
-            throw new Error(`第 ${index + 1} 首原始舞曲下载失败`);
-          }
-          const blob = await response.blob();
+          const trackNumber = index + 1;
+          const buildTrackProgress = (payload, prefix = "正在下载原始舞曲") => {
+            const overallRatio = (index + Number(payload?.ratio || 0)) / playableTracks.length;
+            const progressValue = 12 + Math.round(overallRatio * 56);
+            const currentBytes = downloadedBytes + Number(payload?.loadedBytes || 0);
+            const totalBytes = Number(payload?.totalBytes || 0);
+            const ratioLabel = totalBytes > 0 ? ` ${Math.round(Math.min(Number(payload?.ratio || 0), 1) * 100)}%` : "";
+            const detailLabel = totalBytes > 0
+              ? `${formatBytes(Number(payload?.loadedBytes || 0))} / ${formatBytes(totalBytes)}`
+              : `${formatBytes(Number(payload?.loadedBytes || 0))}`;
+            const sizeHint = payload?.isEstimated ? "，总大小待服务器返回" : "";
+            return {
+              progressValue: Math.min(68, Math.max(12, progressValue)),
+              message: `${prefix} ${trackNumber}/${playableTracks.length}${ratioLabel} (${detailLabel})，累计 ${formatBytes(currentBytes)}${sizeHint}`,
+            };
+          };
+          const blob = await fetchBlobWithProgress(track.audio_url, `第 ${trackNumber} 首原始舞曲`, {
+            retries: Math.max(1, Number(config.trackRetries || config.retries || 3)),
+            connectTimeoutMs: normalizeTimeoutMs(config.trackConnectTimeoutMs, config.connectTimeoutMs ?? 0),
+            stallTimeoutMs: normalizeTimeoutMs(config.trackStallTimeoutMs, config.stallTimeoutMs ?? 0),
+            cacheMode: config.cacheMode || "default",
+            preferXhr: Boolean(config.preferXhr),
+            onStartAttempt: ({ attemptIndex, retries }) => {
+              progress.update(
+                12 + Math.round((index / playableTracks.length) * 56),
+                retries > 1
+                  ? `正在连接原始舞曲 ${trackNumber}/${playableTracks.length} 第 ${attemptIndex}/${retries} 次`
+                  : `正在连接原始舞曲 ${trackNumber}/${playableTracks.length}`
+              );
+            },
+            onConnected: ({ attemptIndex, retries }) => {
+              progress.update(
+                12 + Math.round((index / playableTracks.length) * 56),
+                retries > 1
+                  ? `已连接原始舞曲 ${trackNumber}/${playableTracks.length} 第 ${attemptIndex}/${retries} 次`
+                  : `已连接原始舞曲 ${trackNumber}/${playableTracks.length}`
+              );
+            },
+            onProgress: (payload) => {
+              const state = buildTrackProgress(payload);
+              progress.update(state.progressValue, state.message);
+            },
+            onRetry: ({ attemptIndex, waitMs }) => {
+              progress.update(
+                12 + Math.round((index / playableTracks.length) * 56),
+                `原始舞曲 ${trackNumber}/${playableTracks.length} 第 ${attemptIndex} 次失败，${(waitMs / 1000).toFixed(1)} 秒后重试`
+              );
+            },
+            onComplete: (payload) => {
+              const state = buildTrackProgress(payload, "已完成原始舞曲");
+              progress.update(state.progressValue, state.message);
+            },
+          });
           downloadedBytes += blob.size || 0;
           folder.file(cloudTrackAssetName(track, index), blob, { binary: true });
           progress.update(
             12 + Math.round(((index + 1) / playableTracks.length) * 56),
-            `正在下载原始舞曲 ${index + 1}/${playableTracks.length}，累计 ${formatBytes(downloadedBytes)}`
+            `已写入原始舞曲 ${trackNumber}/${playableTracks.length}，累计 ${formatBytes(downloadedBytes)}`
           );
         }
 
@@ -4105,6 +4398,10 @@
           bundleName: CLOUD_FULL_ARCHIVE_NAME,
           folderName: "1.24",
           cacheMode: "default",
+          trackRetries: 6,
+          trackConnectTimeoutMs: 0,
+          trackStallTimeoutMs: 0,
+          preferXhr: true,
         }).catch(err => {
           log(`${err.message}，已为你打开全部示范舞曲原始文件下载页`);
           triggerDownload(CLOUD_FULL_URL);

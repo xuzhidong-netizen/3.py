@@ -188,6 +188,16 @@ def test_cloud_full_load_uses_same_origin_assets_without_fetch_failure(browser, 
         page.close()
 
 
+def test_cloud_full_download_uses_streaming_track_fetcher() -> None:
+    html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
+
+    assert "async function fetchBlobWithProgress" in html
+    assert 'fetchBlobWithProgress(track.audio_url, `第 ${trackNumber} 首原始舞曲`' in html
+    assert 'const buildTrackProgress = (payload, prefix = "正在下载原始舞曲") => {' in html
+    assert "trackRetries: 6" in html
+    assert "preferXhr: true" in html
+
+
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
     page = browser.new_page()
     try:
