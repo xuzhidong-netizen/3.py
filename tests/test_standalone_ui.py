@@ -204,6 +204,29 @@ def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_s
         page.close()
 
 
+def test_static_page_shows_fallback_protection_controls(browser, static_server):
+    page = browser.new_page()
+    try:
+        page.goto(f"{static_server}/standalone.html")
+        page.wait_for_function(
+            """
+            () => {
+              const badge = document.querySelector('#fallbackModeBadge');
+              const status = document.querySelector('#fallbackStatus');
+              return badge && status && /静态|等待令牌/.test(badge.textContent) && /静态页面|静态保护模式|GitHub Token/.test(status.textContent);
+            }
+            """,
+            timeout=30000,
+        )
+
+        assert page.locator("#saveFallbackTokenBtn").count() == 1
+        assert page.locator("#clearFallbackTokenBtn").count() == 1
+        assert page.locator("#loginFallbackGitHubBtn").count() == 1
+        assert page.locator("#openStaticFallbackBtn").count() == 1
+    finally:
+        page.close()
+
+
 def test_library_and_recognizer_pages_render_core_controls(browser, static_server):
     pages = [
         (f"{static_server}/web_static/library.html", "#groupFilter"),

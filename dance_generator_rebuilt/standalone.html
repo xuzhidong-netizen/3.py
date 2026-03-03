@@ -141,6 +141,29 @@
       line-height: 1.7;
     }
 
+    .protection-status {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(102, 126, 84, 0.18);
+      background: rgba(223, 233, 223, 0.82);
+      color: #345040;
+      line-height: 1.7;
+      font-size: 13px;
+    }
+
+    .protection-status[data-tone="warn"] {
+      border-color: rgba(216, 163, 32, 0.26);
+      background: rgba(216, 163, 32, 0.12);
+      color: #74540f;
+    }
+
+    .protection-status[data-tone="danger"] {
+      border-color: rgba(178, 58, 51, 0.22);
+      background: rgba(178, 58, 51, 0.1);
+      color: #872f2b;
+    }
+
     button {
       border: 0;
       border-radius: 999px;
@@ -912,6 +935,27 @@
 
       <section class="card">
         <div class="section-head">
+          <h2>静态保护模式</h2>
+          <span class="badge" id="fallbackModeBadge">检测中</span>
+        </div>
+        <div class="feedback-form">
+          <p id="fallbackStatus" class="protection-status" data-tone="warn">正在检测本机后端与静态页兜底状态...</p>
+          <label>
+            <span>GitHub Token</span>
+            <input id="fallbackTokenInput" type="password" placeholder="后端不可用时，可保存到当前浏览器作为静态页兜底">
+          </label>
+          <div class="feedback-actions">
+            <button id="saveFallbackTokenBtn" type="button">保存令牌</button>
+            <button id="clearFallbackTokenBtn" type="button">清除令牌</button>
+            <button id="loginFallbackGitHubBtn" type="button">GitHub 登录</button>
+            <button id="openStaticFallbackBtn" type="button">打开静态保护页</button>
+          </div>
+          <p class="feedback-note">本机后端不可用时，主页面会继续保留本地缓存，并尝试用当前浏览器里的 GitHub Token 上传舞曲库等可同步数据；原始音频仍不会上传。</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
           <h2>修改意见</h2>
           <span class="badge">GitHub Issue</span>
         </div>
@@ -1069,6 +1113,11 @@
     const CLOUD_FULL_URL = "./web_static/full_sample_download.html";
     const CLOUD_FULL_ARCHIVE_NAME = "1.24.zip";
     const CLOUD_FULL_PLAYLIST_URL = "./cloud_full.json";
+    const STATIC_SITE_ROOT = "https://xuzhidong-netizen.github.io/3.py";
+    const STATIC_STANDALONE_URL = `${STATIC_SITE_ROOT}/dance_generator_rebuilt/standalone.html`;
+    const STATIC_LIBRARY_URL = `${STATIC_SITE_ROOT}/dance_generator_rebuilt/web_static/library.html`;
+    const STATIC_RECOGNIZER_URL = `${STATIC_SITE_ROOT}/dance_generator_rebuilt/web_static/recognizer.html`;
+    const BACKEND_PROTECTION_TIMEOUT_MS = 4000;
     const GITHUB_ISSUES_URL = "https://github.com/xuzhidong-netizen/3.py/issues";
     const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`;
     const libraryTools = window.DanceLibraryTools || null;
@@ -1078,7 +1127,8 @@
       issues: [],
       currentSong: null,
       currentAudioIndex: 0,
-      sequenceMode: false
+      sequenceMode: false,
+      staticProtectionActive: false
     };
 
     const els = {};
@@ -1222,7 +1272,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder","deleteAllSongsBtn","fallbackModeBadge","fallbackStatus","fallbackTokenInput","saveFallbackTokenBtn","clearFallbackTokenBtn","loginFallbackGitHubBtn","openStaticFallbackBtn"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -1234,6 +1284,66 @@
       const weekdays = ["周日","周一","周二","周三","周四","周五","周六"];
       els.dateInput.value = `${now.getFullYear()}年${String(now.getMonth()+1).padStart(2,"0")}月${String(now.getDate()).padStart(2,"0")}日`;
       els.weekdayInput.value = weekdays[now.getDay()];
+    }
+
+    function setProtectionStatus(message, tone = "warn", badgeText = "静态保护中") {
+      if (!els.fallbackStatus || !els.fallbackModeBadge) return;
+      els.fallbackStatus.dataset.tone = tone;
+      els.fallbackStatus.textContent = message;
+      els.fallbackModeBadge.textContent = badgeText;
+    }
+
+    async function refreshFallbackProtectionStatus(options = {}) {
+      if (!libraryTools) {
+        state.staticProtectionActive = true;
+        setProtectionStatus("当前页面未加载舞曲库同步模块，已自动进入静态保护模式。", "danger", "模块缺失");
+        return;
+      }
+
+      const hasToken = Boolean(libraryTools.getGitHubToken());
+      const backendUrl = libraryTools.getBackendLibraryUrl();
+      if (!backendUrl) {
+        state.staticProtectionActive = true;
+        setProtectionStatus(
+          hasToken
+            ? "当前正在使用静态页面，浏览器里已保存 GitHub Token，可直接把舞曲库等可同步数据上传到 GitHub。"
+            : "当前正在使用静态页面。若要把舞曲库等可同步数据上传到 GitHub，请先在这里保存 GitHub Token。",
+          hasToken ? "warn" : "danger",
+          hasToken ? "静态页兜底" : "等待令牌"
+        );
+        return;
+      }
+
+      const probe = await libraryTools.probeBackendAvailability(BACKEND_PROTECTION_TIMEOUT_MS);
+      if (probe.ok) {
+        state.staticProtectionActive = false;
+        setProtectionStatus("本机后端可用，舞曲库等可同步数据会优先通过后端自动保存到 GitHub。", "success", "后端在线");
+        return;
+      }
+
+      state.staticProtectionActive = true;
+      setProtectionStatus(
+        hasToken
+          ? `本机后端暂不可用，已自动切到静态保护模式。当前浏览器里的 GitHub Token 会继续上传可同步数据。${probe.error ? ` 后端提示：${probe.error}` : ""}`
+          : `本机后端暂不可用，已自动切到静态保护模式。请先在这里保存 GitHub Token，或打开线上静态页继续使用。${probe.error ? ` 后端提示：${probe.error}` : ""}`,
+        hasToken ? "warn" : "danger",
+        hasToken ? "静态保护中" : "等待令牌"
+      );
+
+      if (!options.silentLog) {
+        log(hasToken
+          ? "本机后端暂不可用，已进入静态保护模式，后续会改用当前浏览器里的 GitHub Token 同步可上传数据"
+          : "本机后端暂不可用，已进入静态保护模式。请先保存 GitHub Token，再继续同步可上传数据");
+      }
+    }
+
+    function openStaticFallbackView() {
+      const popup = window.open(STATIC_STANDALONE_URL, "_blank");
+      if (!popup) {
+        throw new Error("浏览器阻止了静态保护页面弹出");
+      }
+      popup.focus();
+      log("已打开线上静态保护页面");
     }
 
     function log(message) {
@@ -1320,15 +1430,27 @@
       try {
         const result = await libraryTools.saveLibraryData(merged.data);
         if (result.source === "backend") {
+          state.staticProtectionActive = false;
+          setProtectionStatus("本机后端可用，舞曲库等可同步数据会优先通过后端自动保存到 GitHub。", "success", "后端在线");
           log("舞曲库已通过后端自动同步到 GitHub");
           return;
         }
         if (result.fallbackFromBackend) {
+          state.staticProtectionActive = true;
+          setProtectionStatus("本机后端暂不可用，已自动切到静态保护模式。当前浏览器里的 GitHub Token 会继续上传可同步数据。", "warn", "静态保护中");
           log("后端暂不可用，已改用当前浏览器中的 GitHub Token 同步到 GitHub");
           return;
         }
+        state.staticProtectionActive = true;
+        setProtectionStatus("当前正在使用静态页面，浏览器里的 GitHub Token 已接管可同步数据上传。", "warn", "静态页兜底");
         log("舞曲库已通过当前浏览器自动同步到 GitHub");
       } catch (error) {
+        const message = error.message || error;
+        if (String(message).includes("当前页面未连接可用后端服务器")) {
+          state.staticProtectionActive = true;
+          setProtectionStatus("本机后端暂不可用，且当前浏览器还没有保存 GitHub Token。请先在左侧“静态保护模式”里保存 Token。", "danger", "等待令牌");
+          log("本机后端暂不可用，可在左侧“静态保护模式”中保存 GitHub Token 后继续同步可上传数据");
+        }
         log(`舞曲库已先更新到本地缓存，自动同步 GitHub 暂未完成：${error.message || error}`);
       }
     }
@@ -3515,6 +3637,10 @@
     }
 
     function auxiliaryPageUrl(relativePath) {
+      if (state.staticProtectionActive) {
+        if (relativePath === "./web_static/library.html") return STATIC_LIBRARY_URL;
+        if (relativePath === "./web_static/recognizer.html") return STATIC_RECOGNIZER_URL;
+      }
       return new URL(relativePath, window.location.href).toString();
     }
 
@@ -3522,14 +3648,14 @@
       const libraryWindow = window.open(auxiliaryPageUrl("./web_static/library.html"), "_blank");
       if (!libraryWindow) throw new Error("浏览器阻止了舞曲库页面弹出");
       libraryWindow.focus();
-      log("已打开舞曲库页面");
+      log(state.staticProtectionActive ? "本机后端暂不可用，已打开线上静态舞曲库页面" : "已打开舞曲库页面");
     }
 
     function openRecognizerView() {
       const recognizerWindow = window.open(auxiliaryPageUrl("./web_static/recognizer.html"), "_blank");
       if (!recognizerWindow) throw new Error("浏览器阻止了舞曲识别页面弹出");
       recognizerWindow.focus();
-      log("已打开舞曲识别页面");
+      log(state.staticProtectionActive ? "本机后端暂不可用，已打开线上静态舞曲识别页面" : "已打开舞曲识别页面");
     }
 
     function broadcastStageState() {
@@ -3960,6 +4086,42 @@
         window.open(GITHUB_ISSUES_URL, "_blank", "noopener");
         log("已打开 GitHub Issues 列表");
       });
+      els.saveFallbackTokenBtn.addEventListener("click", () => {
+        const token = els.fallbackTokenInput.value.trim();
+        if (!token) {
+          setProtectionStatus("请输入 GitHub Token 后再保存。", "danger", "等待令牌");
+          return;
+        }
+        libraryTools?.setGitHubToken(token);
+        els.fallbackTokenInput.value = "";
+        refreshFallbackProtectionStatus({ silentLog: true }).catch(err => {
+          setProtectionStatus(err.message || String(err), "danger", "等待令牌");
+        });
+        log("GitHub Token 已保存到当前浏览器，可用于静态保护模式兜底上传");
+      });
+      els.clearFallbackTokenBtn.addEventListener("click", () => {
+        libraryTools?.clearGitHubToken();
+        els.fallbackTokenInput.value = "";
+        refreshFallbackProtectionStatus({ silentLog: true }).catch(err => {
+          setProtectionStatus(err.message || String(err), "danger", "等待令牌");
+        });
+        log("已清除当前浏览器中的 GitHub Token");
+      });
+      els.loginFallbackGitHubBtn.addEventListener("click", () => {
+        const popup = libraryTools?.openGitHubLoginWindow?.();
+        if (!popup) {
+          setProtectionStatus("浏览器拦截了 GitHub 登录窗口，请允许弹窗后重试。", "danger", "等待令牌");
+          return;
+        }
+        log("已打开 GitHub 登录窗口，登录后会进入 Token 创建页");
+      });
+      els.openStaticFallbackBtn.addEventListener("click", () => {
+        try {
+          openStaticFallbackView();
+        } catch (err) {
+          log(err.message);
+        }
+      });
       $("downloadHtmlBtn").addEventListener("click", () => {
         els.snapshotStage.classList.remove("has-image", "is-ready");
         els.snapshotStage.classList.add("is-generating");
@@ -4004,6 +4166,12 @@
     }
     bindTopActions();
     renderAll();
+    refreshFallbackProtectionStatus({ silentLog: true }).catch(err => {
+      setProtectionStatus(err.message || String(err), "danger", "等待令牌");
+    });
+    window.addEventListener("focus", () => {
+      refreshFallbackProtectionStatus({ silentLog: true }).catch(() => {});
+    });
   </script>
 </body>
 </html>

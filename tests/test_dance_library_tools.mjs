@@ -183,3 +183,53 @@ test("saveLibraryData uses backend api before browser token fallback", async () 
   assert.equal(result.source, "backend");
   assert.equal(result.commitUrl, "https://example.com/commit/1");
 });
+
+test("probeBackendAvailability reports backend health when api is reachable", async () => {
+  const tools = loadTools({
+    location: {
+      href: "http://127.0.0.1:8000/web_static/library.html",
+    },
+    fetch: async (url) => {
+      assert.equal(url.startsWith("http://127.0.0.1:8000/api/library"), true);
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          data: {
+            version: 1,
+            updated_at: "2026-03-03T10:00:00Z",
+            songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-03T10:00:00Z" }],
+          },
+        }),
+      };
+    },
+  });
+
+  const result = await tools.probeBackendAvailability();
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.songs[0].title, "夜来香");
+});
+
+test("probeBackendAvailability reports failure when static page has no backend", async () => {
+  const tools = loadTools({
+    location: {
+      href: "https://xuzhidong-netizen.github.io/3.py/dance_generator_rebuilt/standalone.html",
+    },
+    fetch: async (url) => {
+      assert.equal(url.startsWith("https://xuzhidong-netizen.github.io/api/library"), true);
+      return {
+        ok: false,
+        status: 404,
+        json: async () => ({
+          error: "Not Found",
+        }),
+      };
+    },
+  });
+
+  const result = await tools.probeBackendAvailability();
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 404);
+});

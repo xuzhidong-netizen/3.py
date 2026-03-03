@@ -265,6 +265,36 @@
     };
   }
 
+  async function probeBackendAvailability(timeoutMs = 4000) {
+    const backendUrl = getBackendLibraryUrl();
+    if (!backendUrl) {
+      return {
+        ok: false,
+        source: "backend",
+        error: "当前页面没有可探测的后端接口地址。",
+      };
+    }
+    try {
+      const response = await fetchWithTimeout(`${backendUrl}?ts=${Date.now()}`, { cache: "no-store" }, Math.max(1000, Number(timeoutMs || 4000)));
+      const payload = await safeJson(response);
+      if (!response.ok) {
+        throw buildHttpError("读取后端舞曲库失败", response, payload);
+      }
+      return {
+        ok: true,
+        source: "backend",
+        data: normalizeLibraryData(payload?.data),
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        source: "backend",
+        error: error?.message || String(error),
+        status: error?.status || 0,
+      };
+    }
+  }
+
   async function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     const timer = controller ? global.setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -618,6 +648,7 @@
     normalizeSearchText,
     openGitHubLoginWindow,
     openGitHubTokenWindow,
+    probeBackendAvailability,
     parseSongFileName,
     queryLibrarySongs,
     readCachedLibraryData,
