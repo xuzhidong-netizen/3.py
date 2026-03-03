@@ -212,6 +212,41 @@
     .table-wrap {
       overflow-x: auto;
     }
+    .library-toolbar {
+      display: grid;
+      gap: 14px;
+    }
+    .category-tabs,
+    .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .category-tabs button,
+    .pagination button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .category-tabs button.is-active {
+      background: linear-gradient(135deg, #cf6e33, #e5a57c);
+      color: white;
+      border-color: transparent;
+    }
+    .pagination button[disabled] {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+    .page-note {
+      color: var(--muted);
+      font-size: 13px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -338,7 +373,11 @@
           <p class="eyebrow">Library Data</p>
           <h2>当前舞曲库</h2>
         </div>
-        <span>这里展示当前已经同步到仓库的数据。舞曲识别页刷新后会直接读取这里的内容。</span>
+        <span>这里展示当前已经同步到仓库的数据。已按分类分页展示，舞曲识别页刷新后会直接读取这里的内容。</span>
+      </div>
+      <div class="library-toolbar">
+        <div id="categoryTabs" class="category-tabs"></div>
+        <div id="pagination" class="pagination"></div>
       </div>
       <div id="libraryTable" class="empty">舞曲库里还没有数据。</div>
     </section>
@@ -352,7 +391,12 @@
       pending: [],
       busy: false,
       syncChannel: tools.createSyncChannel(),
+      libraryCategory: "全部",
+      libraryPage: 1,
     };
+
+    const PAGE_SIZE = 20;
+    const CATEGORY_ORDER = ["全部", "拉手舞", "架型舞", "国标舞", "集体舞", "其他"];
 
     const els = {
       songCount: document.getElementById("songCount"),
@@ -371,6 +415,8 @@
       tokenState: document.getElementById("tokenState"),
       queryInput: document.getElementById("queryInput"),
       queryResults: document.getElementById("queryResults"),
+      categoryTabs: document.getElementById("categoryTabs"),
+      pagination: document.getElementById("pagination"),
       libraryTable: document.getElementById("libraryTable"),
     };
 
@@ -461,9 +507,67 @@
     function renderLibraryTable() {
       const songs = state.data.songs || [];
       if (!songs.length) {
+        els.categoryTabs.innerHTML = "";
+        els.pagination.innerHTML = "";
         els.libraryTable.className = "empty";
         els.libraryTable.innerHTML = "舞曲库里还没有数据。";
         return;
+      }
+
+      const counts = new Map();
+      songs.forEach((song) => {
+        const group = tools.classifyDanceGroup(song.dance) || "其他";
+        counts.set(group, (counts.get(group) || 0) + 1);
+      });
+      counts.set("全部", songs.length);
+
+      const visibleCategories = CATEGORY_ORDER.filter((category) => counts.get(category))
+        .concat([...counts.keys()].filter((category) => !CATEGORY_ORDER.includes(category)));
+      if (!counts.get(state.libraryCategory)) {
+        state.libraryCategory = "全部";
+      }
+
+      els.categoryTabs.innerHTML = visibleCategories.map((category) => `
+        <button type="button" data-category="${tools.escapeHtml(category)}" class="${category === state.libraryCategory ? "is-active" : ""}">
+          ${tools.escapeHtml(category)} ${counts.get(category)}
+        </button>
+      `).join("");
+      els.categoryTabs.querySelectorAll("[data-category]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.libraryCategory = button.dataset.category;
+          state.libraryPage = 1;
+          renderLibraryTable();
+        });
+      });
+
+      const filteredSongs = state.libraryCategory === "全部"
+        ? songs
+        : songs.filter((song) => (tools.classifyDanceGroup(song.dance) || "其他") === state.libraryCategory);
+      const totalPages = Math.max(1, Math.ceil(filteredSongs.length / PAGE_SIZE));
+      state.libraryPage = Math.min(Math.max(1, state.libraryPage), totalPages);
+      const startIndex = (state.libraryPage - 1) * PAGE_SIZE;
+      const pagedSongs = filteredSongs.slice(startIndex, startIndex + PAGE_SIZE);
+
+      els.pagination.innerHTML = `
+        <button type="button" id="prevPageBtn" ${state.libraryPage <= 1 ? "disabled" : ""}>上一页</button>
+        <span class="page-note">${tools.escapeHtml(state.libraryCategory)} · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${filteredSongs.length} 条</span>
+        <button type="button" id="nextPageBtn" ${state.libraryPage >= totalPages ? "disabled" : ""}>下一页</button>
+      `;
+      const prevPageBtn = document.getElementById("prevPageBtn");
+      const nextPageBtn = document.getElementById("nextPageBtn");
+      if (prevPageBtn) {
+        prevPageBtn.addEventListener("click", () => {
+          if (state.libraryPage <= 1) return;
+          state.libraryPage -= 1;
+          renderLibraryTable();
+        });
+      }
+      if (nextPageBtn) {
+        nextPageBtn.addEventListener("click", () => {
+          if (state.libraryPage >= totalPages) return;
+          state.libraryPage += 1;
+          renderLibraryTable();
+        });
       }
 
       els.libraryTable.className = "table-wrap";
@@ -472,7 +576,7 @@
           <tr><th>舞曲名</th><th>舞种</th><th>分类</th><th>最近更新</th></tr>
         </thead>
         <tbody>
-          ${songs.map((song) => `
+          ${pagedSongs.map((song) => `
             <tr>
               <td>${tools.escapeHtml(song.title)}</td>
               <td><span class="badge">${tools.escapeHtml(song.dance)}</span></td>
