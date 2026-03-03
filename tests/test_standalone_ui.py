@@ -265,6 +265,8 @@ def test_large_import_uses_fast_mode_guards() -> None:
 
     assert "const LARGE_IMPORT_FILE_THRESHOLD = 120;" in html
     assert "const HUGE_IMPORT_FILE_THRESHOLD = 320;" in html
+    assert "const LARGE_IMPORT_TOTAL_BYTES_THRESHOLD = 160 * 1024 * 1024;" in html
+    assert "const HUGE_IMPORT_TOTAL_BYTES_THRESHOLD = 320 * 1024 * 1024;" in html
     assert "const IMPORT_YIELD_INTERVAL = 20;" in html
     assert "const IMPORT_GUARD_STALL_MS = 8000;" in html
     assert "const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;" in html
@@ -283,6 +285,8 @@ def test_large_import_uses_fast_mode_guards() -> None:
     assert "backgroundLibrarySync: fastMode" in html
     assert "舞曲库同步将在后台继续" in html
     assert "song.url = URL.createObjectURL(song.file);" in html
+    assert "总大小约" in html
+    assert "function summarizeImportSelection(files)" in html
 
 
 def test_song_table_has_pagination_controls() -> None:
