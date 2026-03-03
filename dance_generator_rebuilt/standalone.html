@@ -1131,6 +1131,20 @@
       return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
 
+    function normalizeTimeoutMs(value, fallback) {
+      if (value === undefined || value === null || value === "") {
+        return fallback;
+      }
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return fallback;
+      }
+      if (numeric <= 0) {
+        return 0;
+      }
+      return Math.max(1000, Math.round(numeric));
+    }
+
     function createProgressLogger(label) {
       const entry = createLogEntry(`${label} 0%`);
       let lastText = entry.textContent;
@@ -1480,8 +1494,8 @@
 
     async function fetchArchiveBuffer(archiveUrl, label, progress = null, options = {}) {
       const retries = Math.max(1, Number(options.retries || 1));
-      const connectTimeoutMs = Math.max(1000, Number(options.connectTimeoutMs || 15000));
-      const stallTimeoutMs = Math.max(1000, Number(options.stallTimeoutMs || 12000));
+      const connectTimeoutMs = normalizeTimeoutMs(options.connectTimeoutMs, 15000);
+      const stallTimeoutMs = normalizeTimeoutMs(options.stallTimeoutMs, 12000);
       const sourceLabel = options.sourceLabel || "远端压缩包";
       const cacheMode = options.cacheMode || "default";
 
@@ -1495,6 +1509,7 @@
           if (stallTimer) window.clearTimeout(stallTimer);
         };
         const armConnectTimeout = () => {
+          if (!connectTimeoutMs) return;
           connectTimer = window.setTimeout(() => {
             timeoutReason = "连接超时";
             controller.abort();
@@ -3429,8 +3444,8 @@
       try {
         const archiveBuffer = await fetchArchiveBuffer(url, label, progress, {
           retries: Math.max(1, Number(options.retries || 2)),
-          connectTimeoutMs: Math.max(1000, Number(options.connectTimeoutMs || 15000)),
-          stallTimeoutMs: Math.max(1000, Number(options.stallTimeoutMs || 12000)),
+          connectTimeoutMs: normalizeTimeoutMs(options.connectTimeoutMs, 15000),
+          stallTimeoutMs: normalizeTimeoutMs(options.stallTimeoutMs, 12000),
           sourceLabel: "远端压缩包",
           cacheMode: options.cacheMode || "default",
         });
@@ -3468,8 +3483,8 @@
             progress,
             {
               retries: Math.max(1, Number(config.retries || 3)),
-              connectTimeoutMs: Math.max(1000, Number(config.connectTimeoutMs || 15000)),
-              stallTimeoutMs: Math.max(1000, Number(config.stallTimeoutMs || 12000)),
+              connectTimeoutMs: normalizeTimeoutMs(config.connectTimeoutMs, 15000),
+              stallTimeoutMs: normalizeTimeoutMs(config.stallTimeoutMs, 12000),
               sourceLabel: "远端压缩包",
               cacheMode: config.cacheMode || "default",
               skipDurationProbe: Boolean(config.skipDurationProbe),
@@ -3612,8 +3627,8 @@
         successMessage: "已导入云端全部示范舞曲",
         syncReason: "导入云端全部示范舞曲",
         retries: 6,
-        connectTimeoutMs: 25000,
-        stallTimeoutMs: 45000,
+        connectTimeoutMs: 0,
+        stallTimeoutMs: 0,
         cacheMode: "default",
         skipDurationProbe: true,
         continueOnEntryError: true,
@@ -3685,8 +3700,8 @@
       $("downloadCloudFullBtn").addEventListener("click", () => {
         downloadArchiveWithProgress(CLOUD_FULL_URL, CLOUD_FULL_ARCHIVE_NAME, "下载全部示范舞曲", {
           retries: 6,
-          connectTimeoutMs: 25000,
-          stallTimeoutMs: 45000,
+          connectTimeoutMs: 0,
+          stallTimeoutMs: 0,
           cacheMode: "default",
         });
       });
