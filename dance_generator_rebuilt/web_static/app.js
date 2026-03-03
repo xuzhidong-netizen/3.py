@@ -8,7 +8,7 @@ const CLUBS = [
 const PLACES = ["老年活动中心", "紫菘活动中心", "博士生之家", "韵苑体育馆", "西教工西厅", "东教工二楼"];
 const CLOUD_SAMPLE_URL = "/static/示范舞曲-top3.zip";
 const CLOUD_PLAYLIST_URL = "/static/cloud_sample.json";
-const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
+const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/3.py/releases/download/v1.24-assets/1.24.zip";
 const CLOUD_FULL_PLAYLIST_URL = "/static/cloud_full.json";
 
 const state = {
