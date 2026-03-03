@@ -239,6 +239,14 @@ def test_stage_page_has_paginated_scroll_layout() -> None:
     assert "stage-board-scroll" in html
     assert "focusCurrentStageSong" in html
     assert "STAGE_PAGE_SIZE_OPTIONS = [20, 50, 100]" in html
+    assert '{ id: "custom", label: "自定义风格", note: "手动调色布局" }' in html
+    assert "const CUSTOM_THEME_STORAGE_KEY = \"dance-stage-custom-theme-v1\";" in html
+    assert "function applyCustomThemeSettings()" in html
+    assert 'data-theme-custom-panel' in html
+    assert 'data-custom-theme-input="bgTop"' in html
+    assert 'data-custom-theme-reset' in html
+    assert 'stage-controls-inline' in html
+    assert 'stage-live-card is-current' in html
 
 
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
