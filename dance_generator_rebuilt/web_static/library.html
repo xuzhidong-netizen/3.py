@@ -409,6 +409,10 @@
             <span>舞种筛选</span>
             <select id="danceFilter"></select>
           </label>
+          <label>
+            <span>每页显示</span>
+            <select id="pageSizeFilter"></select>
+          </label>
         </div>
         <div id="categoryTabs" class="category-tabs"></div>
         <div id="pagination" class="pagination"></div>
@@ -428,9 +432,10 @@
       libraryCategory: "全部",
       libraryDance: "全部",
       libraryPage: 1,
+      libraryPageSize: 20,
     };
 
-    const PAGE_SIZE = 20;
+    const PAGE_SIZE_OPTIONS = [10, 20, 50];
     const CATEGORY_ORDER = ["全部", "拉手舞", "架型舞", "国标舞", "集体舞", "其他"];
 
     const els = {
@@ -452,6 +457,7 @@
       queryResults: document.getElementById("queryResults"),
       groupFilter: document.getElementById("groupFilter"),
       danceFilter: document.getElementById("danceFilter"),
+      pageSizeFilter: document.getElementById("pageSizeFilter"),
       categoryTabs: document.getElementById("categoryTabs"),
       pagination: document.getElementById("pagination"),
       libraryTable: document.getElementById("libraryTable"),
@@ -546,6 +552,7 @@
       if (!songs.length) {
         els.groupFilter.innerHTML = "";
         els.danceFilter.innerHTML = "";
+        els.pageSizeFilter.innerHTML = "";
         els.categoryTabs.innerHTML = "";
         els.pagination.innerHTML = "";
         els.libraryTable.className = "empty";
@@ -608,17 +615,31 @@
         renderLibraryTable();
       };
 
+      if (!PAGE_SIZE_OPTIONS.includes(state.libraryPageSize)) {
+        state.libraryPageSize = 20;
+      }
+      els.pageSizeFilter.innerHTML = PAGE_SIZE_OPTIONS.map((pageSize) => `
+        <option value="${pageSize}" ${pageSize === state.libraryPageSize ? "selected" : ""}>
+          ${pageSize} 条
+        </option>
+      `).join("");
+      els.pageSizeFilter.onchange = () => {
+        state.libraryPageSize = Number(els.pageSizeFilter.value) || 20;
+        state.libraryPage = 1;
+        renderLibraryTable();
+      };
+
       const danceFilteredSongs = state.libraryDance === "全部"
         ? filteredSongs
         : filteredSongs.filter((song) => song.dance === state.libraryDance);
-      const totalPages = Math.max(1, Math.ceil(danceFilteredSongs.length / PAGE_SIZE));
+      const totalPages = Math.max(1, Math.ceil(danceFilteredSongs.length / state.libraryPageSize));
       state.libraryPage = Math.min(Math.max(1, state.libraryPage), totalPages);
-      const startIndex = (state.libraryPage - 1) * PAGE_SIZE;
-      const pagedSongs = danceFilteredSongs.slice(startIndex, startIndex + PAGE_SIZE);
+      const startIndex = (state.libraryPage - 1) * state.libraryPageSize;
+      const pagedSongs = danceFilteredSongs.slice(startIndex, startIndex + state.libraryPageSize);
 
       els.pagination.innerHTML = `
         <button type="button" id="prevPageBtn" ${state.libraryPage <= 1 ? "disabled" : ""}>上一页</button>
-        <span class="page-note">${tools.escapeHtml(state.libraryCategory)} / ${tools.escapeHtml(state.libraryDance)} · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${danceFilteredSongs.length} 条</span>
+        <span class="page-note">${tools.escapeHtml(state.libraryCategory)} / ${tools.escapeHtml(state.libraryDance)} · 每页 ${state.libraryPageSize} 条 · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${danceFilteredSongs.length} 条</span>
         <button type="button" id="nextPageBtn" ${state.libraryPage >= totalPages ? "disabled" : ""}>下一页</button>
       `;
       const prevPageBtn = document.getElementById("prevPageBtn");
