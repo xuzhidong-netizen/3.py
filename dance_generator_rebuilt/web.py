@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import re
+import ssl
 from dataclasses import asdict
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -23,6 +24,11 @@ from dance_generator_rebuilt.domain.models import Part
 from dance_generator_rebuilt.services.rules import validate_dance_list
 from dance_generator_rebuilt.services.scanner import parse_song, scan_music_directory
 from dance_generator_rebuilt.services.serialization import dance_list_from_dict, dance_list_to_dict, default_date_string
+
+try:
+    import certifi
+except ImportError:  # pragma: no cover - fallback for older local envs
+    certifi = None
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -155,6 +161,12 @@ def github_headers() -> dict[str, str]:
     }
 
 
+def github_ssl_context() -> ssl.SSLContext:
+    if certifi is not None:
+        return ssl.create_default_context(cafile=certifi.where())
+    return ssl.create_default_context()
+
+
 def github_request(method: str, url: str, payload: dict | None = None) -> dict:
     body = None if payload is None else json.dumps(payload).encode("utf-8")
     headers = github_headers()
@@ -162,7 +174,7 @@ def github_request(method: str, url: str, payload: dict | None = None) -> dict:
         headers["Content-Type"] = "application/json"
     request = UrlRequest(url, data=body, headers=headers, method=method)
     try:
-        with urlopen(request, timeout=20) as response:
+        with urlopen(request, timeout=20, context=github_ssl_context()) as response:
             raw = response.read().decode("utf-8")
             return json.loads(raw) if raw else {}
     except HTTPError as exc:

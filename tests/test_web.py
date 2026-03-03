@@ -126,3 +126,25 @@ def test_library_post_writes_file_and_returns_commit_url(tmp_path, monkeypatch):
     assert response.json()["commit_url"] == "https://example.com/commit/1"
     saved = json.loads(library_path.read_text(encoding="utf-8"))
     assert saved["songs"][0]["title"] == "夜来香"
+
+
+def test_github_ssl_context_uses_certifi_bundle_when_available(tmp_path, monkeypatch):
+    client, _ = create_client(tmp_path, monkeypatch)
+    assert client is not None
+
+    class FakeCertifi:
+        @staticmethod
+        def where() -> str:
+            return "/tmp/fake-certifi.pem"
+
+    captured = {}
+
+    def fake_create_default_context(*, cafile=None):
+        captured["cafile"] = cafile
+        return cafile
+
+    monkeypatch.setattr(web, "certifi", FakeCertifi())
+    monkeypatch.setattr(web.ssl, "create_default_context", fake_create_default_context)
+
+    assert web.github_ssl_context() == "/tmp/fake-certifi.pem"
+    assert captured["cafile"] == "/tmp/fake-certifi.pem"

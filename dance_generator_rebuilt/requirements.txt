@@ -5,3 +5,4 @@ mutagen==1.47.0
 pdfkit==1.0.0
 PyMuPDF==1.21.0
 imageio==2.36.1
+certifi>=2024.0.0
