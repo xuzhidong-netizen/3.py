@@ -898,10 +898,10 @@
           <div class="import-drop">
             <div class="import-drop-head">
               <div class="import-drop-copy">
-                <strong>导入舞曲目录</strong>
+                <strong>导入舞曲文件</strong>
               </div>
             </div>
-            <input id="fileInput" type="file" webkitdirectory multiple>
+            <input id="fileInput" type="file" accept=".mp3,.wma,.ogg,.m4a,.flac,audio/mpeg,audio/x-ms-wma,audio/ogg,audio/mp4,audio/flac" multiple>
           </div>
           <div class="import-drop">
             <div class="import-drop-head">
@@ -944,12 +944,12 @@
         </div>
         <div class="import-tips">
           <span class="import-tip">选中后自动读取</span>
-          <span class="import-tip">支持目录 / ZIP</span>
+          <span class="import-tip">支持音频文件 / ZIP</span>
           <span class="import-tip">只提取信息，不上传音频</span>
         </div>
         <details class="import-details">
           <summary>导入说明</summary>
-          <p>支持直接导入本地舞曲目录，也支持在浏览器内解压 ZIP 后导入。选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传原始音频文件。</p>
+          <p>支持直接多选本地舞曲文件，也支持在浏览器内解压 ZIP 后导入。选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传原始音频文件。</p>
         </details>
       </section>
 
@@ -4858,7 +4858,7 @@
 
     function bindTopActions() {
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
-      els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲目录"));
+      els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲文件"));
       els.archiveInput.addEventListener("change", () => scheduleAutoLoad("ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已为你打开前3首示例舞曲下载链接`);
