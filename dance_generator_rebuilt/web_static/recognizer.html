@@ -114,6 +114,49 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
+    .mode-switch {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 8px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+      width: min(100%, 520px);
+      margin-top: 18px;
+    }
+    .mode-btn {
+      border: 0;
+      border-radius: 18px;
+      min-height: 56px;
+      padding: 12px 16px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: background 150ms ease, color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    }
+    .mode-btn strong {
+      display: block;
+      color: inherit;
+      font-size: 16px;
+    }
+    .mode-btn span {
+      display: block;
+      margin-top: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .mode-btn.is-active {
+      background: linear-gradient(135deg, #cf6e33, #ebb48e);
+      color: #fff7f2;
+      box-shadow: 0 14px 26px rgba(207, 110, 51, 0.24);
+    }
+    .mode-btn:hover {
+      transform: translateY(-1px);
+    }
     .hero-actions {
       display: flex;
       gap: 12px;
@@ -191,6 +234,9 @@
       grid-template-columns: 1.2fr 0.8fr;
       gap: 18px;
     }
+    .is-hidden {
+      display: none;
+    }
     .card {
       padding: 22px;
       display: grid;
@@ -225,6 +271,7 @@
     .actions button:focus-visible,
     .actions label:focus-within,
     .search-box:focus-visible,
+    .mode-btn:focus-visible,
     .hero-actions a:focus-visible,
     .nav-pill:focus-visible {
       outline: none;
@@ -364,19 +411,29 @@
           <p class="eyebrow">Dance Recognition</p>
           <h1>舞曲识别</h1>
           <p>识别顺序是“文件名规则优先，舞曲库回查兜底”。如果文件名没有直接写出舞种，页面会用提取到的舞曲名去查询舞曲库，并返回对应舞种。</p>
+          <div class="mode-switch" role="tablist" aria-label="识别方式">
+            <button id="searchModeBtn" class="mode-btn is-active" type="button" role="tab" aria-selected="true">
+              <strong>舞曲名搜索识别</strong>
+              <span>先输入舞曲名或文件名，直接查看文件名规则和舞曲库匹配结果。</span>
+            </button>
+            <button id="uploadModeBtn" class="mode-btn" type="button" role="tab" aria-selected="false">
+              <strong>文件上传识别</strong>
+              <span>上传音频文件批量识别舞种，适合整理本地舞曲目录。</span>
+            </button>
+          </div>
         </div>
         <div class="hero-actions">
           <a href="../standalone.html">返回主页面</a>
         </div>
       </div>
-      <div class="actions">
+      <div id="uploadActions" class="actions is-hidden">
         <label for="recognizerInput">上传文件
           <input id="recognizerInput" type="file" accept=".mp3,.wma,.ogg,.m4a,.flac" multiple>
         </label>
         <button id="refreshLibraryBtn" type="button">刷新舞曲库</button>
         <button id="clearBtn" type="button">清空结果</button>
       </div>
-      <div class="stats">
+      <div id="uploadStats" class="stats is-hidden">
         <article class="stat"><strong id="totalCount">0</strong><span>文件总数</span></article>
         <article class="stat"><strong id="filenameCount">0</strong><span>文件名识别</span></article>
         <article class="stat"><strong id="libraryCount">0</strong><span>舞曲库识别</span></article>
@@ -388,18 +445,7 @@
     <section id="statusBar" class="status" data-tone="neutral">正在加载舞曲库数据...</section>
 
     <section class="grid">
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <p class="eyebrow">Recognition Results</p>
-            <h2>识别结果</h2>
-          </div>
-          <span>优先按文件名前缀识别，例如 <code>03-并四-歌名.mp3</code>。文件名无法识别时，会拿提取到的舞曲名去查询舞曲库。</span>
-        </div>
-        <div id="resultsWrap" class="empty">还没有上传文件。</div>
-      </section>
-
-      <section class="card">
+      <section id="searchPanel" class="card">
         <div class="card-head">
           <div>
             <p class="eyebrow">Song Search</p>
@@ -409,6 +455,17 @@
         </div>
         <input id="searchInput" class="search-box" type="search" placeholder="输入舞曲名或文件名，例如 并四-月亮惹的祸.mp3">
         <div id="searchResults" class="empty">输入舞曲名或文件名后即可查看搜索结果。</div>
+      </section>
+
+      <section id="uploadPanel" class="card is-hidden">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Recognition Results</p>
+            <h2>文件上传识别</h2>
+          </div>
+          <span>优先按文件名前缀识别，例如 <code>03-并四-歌名.mp3</code>。文件名无法识别时，会拿提取到的舞曲名去查询舞曲库。</span>
+        </div>
+        <div id="resultsWrap" class="empty">还没有上传文件。</div>
       </section>
 
       <section class="card">
@@ -444,10 +501,17 @@
       libraryData: tools.defaultLibraryData(),
       rows: [],
       files: [],
+      mode: "search",
       syncChannel: tools.createSyncChannel(),
     };
 
     const els = {
+      searchModeBtn: document.getElementById("searchModeBtn"),
+      uploadModeBtn: document.getElementById("uploadModeBtn"),
+      searchPanel: document.getElementById("searchPanel"),
+      uploadPanel: document.getElementById("uploadPanel"),
+      uploadActions: document.getElementById("uploadActions"),
+      uploadStats: document.getElementById("uploadStats"),
       recognizerInput: document.getElementById("recognizerInput"),
       refreshLibraryBtn: document.getElementById("refreshLibraryBtn"),
       clearBtn: document.getElementById("clearBtn"),
@@ -461,6 +525,23 @@
       searchResults: document.getElementById("searchResults"),
       resultsWrap: document.getElementById("resultsWrap"),
     };
+
+    function renderMode() {
+      const searchActive = state.mode === "search";
+      els.searchModeBtn.classList.toggle("is-active", searchActive);
+      els.searchModeBtn.setAttribute("aria-selected", searchActive ? "true" : "false");
+      els.uploadModeBtn.classList.toggle("is-active", !searchActive);
+      els.uploadModeBtn.setAttribute("aria-selected", searchActive ? "false" : "true");
+      els.searchPanel.classList.toggle("is-hidden", !searchActive);
+      els.uploadPanel.classList.toggle("is-hidden", searchActive);
+      els.uploadActions.classList.toggle("is-hidden", searchActive);
+      els.uploadStats.classList.toggle("is-hidden", searchActive);
+    }
+
+    function switchMode(mode) {
+      state.mode = mode === "upload" ? "upload" : "search";
+      renderMode();
+    }
 
     function setStatus(message, tone) {
       els.statusBar.dataset.tone = tone || "neutral";
@@ -654,6 +735,15 @@
       renderSearchResults();
     });
 
+    els.searchModeBtn.addEventListener("click", () => {
+      switchMode("search");
+      els.searchInput.focus();
+    });
+
+    els.uploadModeBtn.addEventListener("click", () => {
+      switchMode("upload");
+    });
+
     if (state.syncChannel) {
       state.syncChannel.onmessage = (event) => {
         if (event.data?.type !== "library-updated") return;
@@ -667,6 +757,7 @@
       };
     }
 
+    renderMode();
     renderAll();
     refreshLibrary(false);
   </script>
