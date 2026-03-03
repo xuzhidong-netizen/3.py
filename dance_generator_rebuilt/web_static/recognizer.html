@@ -526,6 +526,14 @@
       resultsWrap: document.getElementById("resultsWrap"),
     };
 
+    function debounce(fn, delay = 120) {
+      let timer = null;
+      return (...args) => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => fn(...args), delay);
+      };
+    }
+
     function renderMode() {
       const searchActive = state.mode === "search";
       els.searchModeBtn.classList.toggle("is-active", searchActive);
@@ -541,6 +549,11 @@
     function switchMode(mode) {
       state.mode = mode === "upload" ? "upload" : "search";
       renderMode();
+      if (state.mode === "search") {
+        renderSearchResults();
+      } else {
+        renderResults();
+      }
     }
 
     function setStatus(message, tone) {
@@ -691,8 +704,11 @@
 
     function renderAll() {
       renderStats();
-      renderSearchResults();
-      renderResults();
+      if (state.mode === "search") {
+        renderSearchResults();
+      } else {
+        renderResults();
+      }
     }
 
     async function refreshLibrary(silent) {
@@ -731,8 +747,12 @@
       setStatus("已清空识别结果。", "success");
     });
 
-    els.searchInput.addEventListener("input", () => {
+    const debouncedRenderSearchResults = debounce(() => {
       renderSearchResults();
+    }, 140);
+
+    els.searchInput.addEventListener("input", () => {
+      debouncedRenderSearchResults();
     });
 
     els.searchModeBtn.addEventListener("click", () => {

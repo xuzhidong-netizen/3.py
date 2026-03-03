@@ -1137,6 +1137,10 @@
     let stageControlChannel = null;
     let nextLocalSongId = 1;
     let autoLoadTimer = null;
+    let draggedSongRow = null;
+    let lastPlayingSongId = "";
+    let lastScrolledSongId = "";
+    const MAX_LOG_ENTRIES = 120;
 
     function $(id) { return document.getElementById(id); }
 
@@ -1156,6 +1160,9 @@
       div.className = "log-entry";
       div.textContent = message;
       els.log.prepend(div);
+      while (els.log.childElementCount > MAX_LOG_ENTRIES) {
+        els.log.lastElementChild?.remove();
+      }
       return div;
     }
 
@@ -2167,7 +2174,6 @@
         });
       });
       els.songsBody.innerHTML = rows.join("");
-      bindTableActions();
     }
 
     function syncStateFromTable() {
@@ -2196,46 +2202,84 @@
       renumber();
     }
 
-    function bindTableActions() {
-      let dragged = null;
-      [...els.songsBody.querySelectorAll(".song-row")].forEach(row => {
-        row.addEventListener("dragstart", () => {
-          dragged = row;
-          row.classList.add("dragging");
-        });
-        row.addEventListener("dragend", () => {
-          row.classList.remove("dragging");
-          dragged = null;
-          syncStateFromTable();
-          renderAll();
-        });
-        row.addEventListener("dragover", event => {
-          event.preventDefault();
-          if (!dragged || dragged === row) return;
-          const rect = row.getBoundingClientRect();
-          const before = event.clientY < rect.top + rect.height / 2;
-          row.parentNode.insertBefore(dragged, before ? row : row.nextSibling);
-        });
-        row.addEventListener("click", event => {
-          if (event.target.closest("button") || event.target.closest("input")) return;
-          const index = Number(row.dataset.num) - 1;
-          toggleSongPlayback(index);
-        });
-        row.querySelector(".replace-row").addEventListener("click", () => {
-          const songId = row.dataset.songId;
-          replaceSongById(songId).catch(err => log(err.message));
-        });
-        row.querySelector(".delete-row").addEventListener("click", () => {
-          const index = Number(row.dataset.num) - 1;
-          const song = allSongs()[index];
-          state.parts.forEach(part => {
-            const i = part.music.indexOf(song);
-            if (i !== -1) part.music.splice(i, 1);
-          });
-          renumber();
-          renderAll();
-          log("已删除舞曲");
-        });
+    function songRowFromTarget(target) {
+      return target?.closest?.(".song-row") || null;
+    }
+
+    function removeSongById(songId) {
+      const song = allSongs().find((item) => item.id === songId);
+      if (!song) return false;
+      revokeSongUrl(song);
+      state.parts.forEach((part) => {
+        const index = part.music.indexOf(song);
+        if (index !== -1) {
+          part.music.splice(index, 1);
+        }
+      });
+      if (state.currentSong?.id === songId) {
+        state.currentSong = null;
+        state.currentAudioIndex = 0;
+        els.player.pause();
+        els.player.removeAttribute("src");
+        els.player.load();
+        lastPlayingSongId = "";
+        lastScrolledSongId = "";
+      }
+      renumber();
+      return true;
+    }
+
+    function bindSongsTableInteractions() {
+      els.songsBody.addEventListener("dragstart", (event) => {
+        const row = songRowFromTarget(event.target);
+        if (!row) return;
+        draggedSongRow = row;
+        row.classList.add("dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", row.dataset.songId || "");
+        }
+      });
+
+      els.songsBody.addEventListener("dragend", (event) => {
+        const row = songRowFromTarget(event.target);
+        if (!row) return;
+        row.classList.remove("dragging");
+        draggedSongRow = null;
+        syncStateFromTable();
+        renderAll();
+      });
+
+      els.songsBody.addEventListener("dragover", (event) => {
+        const row = songRowFromTarget(event.target);
+        if (!row || !draggedSongRow || draggedSongRow === row) return;
+        event.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const before = event.clientY < rect.top + rect.height / 2;
+        row.parentNode.insertBefore(draggedSongRow, before ? row : row.nextSibling);
+      });
+
+      els.songsBody.addEventListener("click", (event) => {
+        const row = songRowFromTarget(event.target);
+        if (!row) return;
+
+        if (event.target.closest(".replace-row")) {
+          replaceSongById(row.dataset.songId).catch(err => log(err.message));
+          return;
+        }
+
+        if (event.target.closest(".delete-row")) {
+          if (removeSongById(row.dataset.songId)) {
+            renderAll();
+            log("已删除舞曲");
+          }
+          return;
+        }
+
+        if (event.target.closest("button") || event.target.closest("input")) return;
+
+        const index = Number(row.dataset.num) - 1;
+        toggleSongPlayback(index);
       });
     }
 
@@ -2247,15 +2291,19 @@
     }
 
     function updatePlayingRow() {
-      const activeNum = state.currentAudioIndex + 1;
-      let activeRow = null;
-      [...els.songsBody.querySelectorAll(".song-row")].forEach(row => {
-        const rowNum = Number(row.dataset.num || "0");
-        const isActive = rowNum === activeNum;
-        row.classList.toggle("is-playing", isActive);
-        if (isActive) activeRow = row;
-      });
+      const activeSongId = state.currentSong?.id || "";
+      if (lastPlayingSongId && lastPlayingSongId !== activeSongId) {
+        els.songsBody.querySelector(`[data-song-id="${lastPlayingSongId}"]`)?.classList.remove("is-playing");
+      }
+      const activeRow = activeSongId
+        ? els.songsBody.querySelector(`[data-song-id="${activeSongId}"]`)
+        : null;
       if (activeRow) {
+        activeRow.classList.add("is-playing");
+      }
+      lastPlayingSongId = activeSongId;
+      if (activeRow && lastScrolledSongId !== activeSongId) {
+        lastScrolledSongId = activeSongId;
         activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       broadcastStageState();
@@ -3996,6 +4044,8 @@
       state.currentSong = null;
       state.currentAudioIndex = 0;
       state.sequenceMode = false;
+      lastPlayingSongId = "";
+      lastScrolledSongId = "";
       els.player.pause();
       els.player.removeAttribute("src");
       els.player.load();
@@ -4165,6 +4215,7 @@
       controlChannel.onmessage = (event) => handleStageControl(event.data?.action, event.data?.index);
     }
     bindTopActions();
+    bindSongsTableInteractions();
     renderAll();
     refreshFallbackProtectionStatus({ silentLog: true }).catch(err => {
       setProtectionStatus(err.message || String(err), "danger", "等待令牌");

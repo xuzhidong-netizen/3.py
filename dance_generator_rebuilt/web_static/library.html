@@ -553,6 +553,14 @@
       return date.toLocaleString("zh-CN", { hour12: false });
     }
 
+    function debounce(fn, delay = 120) {
+      let timer = null;
+      return (...args) => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => fn(...args), delay);
+      };
+    }
+
     function setStatus(message, tone) {
       els.statusBar.dataset.tone = tone || "neutral";
       els.statusBar.textContent = message;
@@ -667,24 +675,12 @@
           ${tools.escapeHtml(category)} (${counts.get(category)})
         </option>
       `).join("");
-      els.groupFilter.onchange = () => {
-        state.libraryCategory = els.groupFilter.value;
-        state.libraryPage = 1;
-        renderLibraryTable();
-      };
 
       els.categoryTabs.innerHTML = visibleCategories.map((category) => `
         <button type="button" data-category="${tools.escapeHtml(category)}" class="${category === state.libraryCategory ? "is-active" : ""}">
           ${tools.escapeHtml(category)} ${counts.get(category)}
         </button>
       `).join("");
-      els.categoryTabs.querySelectorAll("[data-category]").forEach((button) => {
-        button.addEventListener("click", () => {
-          state.libraryCategory = button.dataset.category;
-          state.libraryPage = 1;
-          renderLibraryTable();
-        });
-      });
 
       const filteredSongs = state.libraryCategory === "全部"
         ? songs
@@ -698,11 +694,6 @@
           ${tools.escapeHtml(dance)}
         </option>
       `).join("");
-      els.danceFilter.onchange = () => {
-        state.libraryDance = els.danceFilter.value;
-        state.libraryPage = 1;
-        renderLibraryTable();
-      };
 
       if (!PAGE_SIZE_OPTIONS.includes(state.libraryPageSize)) {
         state.libraryPageSize = 20;
@@ -712,11 +703,6 @@
           ${pageSize} 条
         </option>
       `).join("");
-      els.pageSizeFilter.onchange = () => {
-        state.libraryPageSize = Number(els.pageSizeFilter.value) || 20;
-        state.libraryPage = 1;
-        renderLibraryTable();
-      };
 
       const danceFilteredSongs = state.libraryDance === "全部"
         ? filteredSongs
@@ -727,26 +713,10 @@
       const pagedSongs = danceFilteredSongs.slice(startIndex, startIndex + state.libraryPageSize);
 
       els.pagination.innerHTML = `
-        <button type="button" id="prevPageBtn" ${state.libraryPage <= 1 ? "disabled" : ""}>上一页</button>
+        <button type="button" data-page-action="prev" ${state.libraryPage <= 1 ? "disabled" : ""}>上一页</button>
         <span class="page-note">${tools.escapeHtml(state.libraryCategory)} / ${tools.escapeHtml(state.libraryDance)} · 每页 ${state.libraryPageSize} 条 · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${danceFilteredSongs.length} 条</span>
-        <button type="button" id="nextPageBtn" ${state.libraryPage >= totalPages ? "disabled" : ""}>下一页</button>
+        <button type="button" data-page-action="next" ${state.libraryPage >= totalPages ? "disabled" : ""}>下一页</button>
       `;
-      const prevPageBtn = document.getElementById("prevPageBtn");
-      const nextPageBtn = document.getElementById("nextPageBtn");
-      if (prevPageBtn) {
-        prevPageBtn.addEventListener("click", () => {
-          if (state.libraryPage <= 1) return;
-          state.libraryPage -= 1;
-          renderLibraryTable();
-        });
-      }
-      if (nextPageBtn) {
-        nextPageBtn.addEventListener("click", () => {
-          if (state.libraryPage >= totalPages) return;
-          state.libraryPage += 1;
-          renderLibraryTable();
-        });
-      }
 
       els.libraryTable.className = "table-wrap";
       els.libraryTable.innerHTML = `<table>
@@ -888,8 +858,49 @@
       setStatus("已清除当前浏览器中的 GitHub Token。", "success");
     });
 
-    els.queryInput.addEventListener("input", () => {
+    const debouncedRenderQueryResults = debounce(() => {
       renderQueryResults();
+    }, 140);
+
+    els.groupFilter.addEventListener("change", () => {
+      state.libraryCategory = els.groupFilter.value;
+      state.libraryPage = 1;
+      renderLibraryTable();
+    });
+
+    els.danceFilter.addEventListener("change", () => {
+      state.libraryDance = els.danceFilter.value;
+      state.libraryPage = 1;
+      renderLibraryTable();
+    });
+
+    els.pageSizeFilter.addEventListener("change", () => {
+      state.libraryPageSize = Number(els.pageSizeFilter.value) || 20;
+      state.libraryPage = 1;
+      renderLibraryTable();
+    });
+
+    els.categoryTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-category]");
+      if (!button) return;
+      state.libraryCategory = button.dataset.category || "全部";
+      state.libraryPage = 1;
+      renderLibraryTable();
+    });
+
+    els.pagination.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-page-action]");
+      if (!button || button.disabled) return;
+      if (button.dataset.pageAction === "prev" && state.libraryPage > 1) {
+        state.libraryPage -= 1;
+      } else if (button.dataset.pageAction === "next") {
+        state.libraryPage += 1;
+      }
+      renderLibraryTable();
+    });
+
+    els.queryInput.addEventListener("input", () => {
+      debouncedRenderQueryResults();
     });
 
     if (state.syncChannel) {
