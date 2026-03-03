@@ -33,4 +33,5 @@ song-list.png
 .DS_Store
 .venv/
 token.ini
+.env.local
 *.pyc
