@@ -1019,7 +1019,6 @@
     const KNOWN = new Set([...HANDLE, ...FRAME, ...BALLROOM, ...COLLECTIVE, "开场曲", "结束曲"]);
     const AUDIO_FILE_PATTERN = /\.(mp3|wma|ogg|m4a|flac)$/i;
     const CLOUD_SAMPLE_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip";
-    const CLOUD_SAMPLE_FALLBACK_URL = "./web_static/示范舞曲-top3.zip";
     const CLOUD_SAMPLE_ARCHIVE_NAME = "示范舞曲-top3.zip";
     const CLOUD_PLAYLIST_URL = "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json";
     const CLOUD_FULL_URL = "https://github.com/xuzhidong-netizen/2.py/releases/download/v1.24-assets/1.24.zip";
@@ -1081,6 +1080,10 @@
       }
       const digits = size >= 100 || index === 0 ? 0 : size >= 10 ? 1 : 2;
       return `${size.toFixed(digits)} ${units[index]}`;
+    }
+
+    function delay(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
 
     function createProgressLogger(label) {
@@ -1409,24 +1412,67 @@
       return extracted;
     }
 
-    async function fetchArchiveBuffer(archiveUrl, label, fallbackUrl = "", progress = null) {
-      const attemptFetch = async (targetUrl, timeoutMs, sourceLabel) => {
+    async function fetchArchiveBuffer(archiveUrl, label, progress = null, options = {}) {
+      const retries = Math.max(1, Number(options.retries || 1));
+      const connectTimeoutMs = Math.max(1000, Number(options.connectTimeoutMs || 15000));
+      const stallTimeoutMs = Math.max(1000, Number(options.stallTimeoutMs || 12000));
+      const sourceLabel = options.sourceLabel || "远端压缩包";
+      const cacheMode = options.cacheMode || "default";
+
+      const attemptFetch = async (targetUrl, attemptIndex) => {
         const controller = new AbortController();
-        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        let timeoutReason = "连接超时";
+        let connectTimer = null;
+        let stallTimer = null;
+        const clearTimers = () => {
+          if (connectTimer) window.clearTimeout(connectTimer);
+          if (stallTimer) window.clearTimeout(stallTimer);
+        };
+        const armConnectTimeout = () => {
+          connectTimer = window.setTimeout(() => {
+            timeoutReason = "连接超时";
+            controller.abort();
+          }, connectTimeoutMs);
+        };
+        const armStallTimeout = () => {
+          if (!stallTimeoutMs) return;
+          if (stallTimer) window.clearTimeout(stallTimer);
+          stallTimer = window.setTimeout(() => {
+            timeoutReason = "下载超时";
+            controller.abort();
+          }, stallTimeoutMs);
+        };
         try {
-          const response = await fetch(targetUrl, { cache: "no-store", signal: controller.signal });
+          armConnectTimeout();
+          progress?.update(
+            16,
+            retries > 1
+              ? `正在连接${sourceLabel} 第 ${attemptIndex}/${retries} 次`
+              : `正在连接${sourceLabel}`
+          );
+          const response = await fetch(targetUrl, {
+            cache: attemptIndex > 1 ? "reload" : cacheMode,
+            signal: controller.signal
+          });
+          if (connectTimer) {
+            window.clearTimeout(connectTimer);
+            connectTimer = null;
+          }
           if (!response.ok) {
             throw new Error(`${label}压缩包读取失败`);
           }
           const totalBytes = Number(response.headers.get("content-length")) || 0;
           if (!response.body || typeof response.body.getReader !== "function") {
+            armStallTimeout();
             progress?.update(
               58,
               totalBytes
                 ? `${sourceLabel}下载完成 ${formatBytes(totalBytes)}`
                 : `${sourceLabel}下载完成`
             );
-            return await response.arrayBuffer();
+            const buffer = await response.arrayBuffer();
+            clearTimers();
+            return buffer;
           }
 
           const reader = response.body.getReader();
@@ -1434,11 +1480,13 @@
           const chunkLengths = [];
           let receivedBytes = 0;
           let nextUnboundedLog = 512 * 1024;
+          armStallTimeout();
 
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             if (!value) continue;
+            armStallTimeout();
             chunks.push(value);
             chunkLengths.push(value.byteLength);
             receivedBytes += value.byteLength;
@@ -1466,32 +1514,40 @@
               ? `${sourceLabel}下载完成 ${formatBytes(receivedBytes)}`
               : `${sourceLabel}下载完成 ${formatBytes(receivedBytes)}`
           );
+          clearTimers();
           return merged.buffer;
         } finally {
-          window.clearTimeout(timer);
+          clearTimers();
         }
       };
 
-      try {
-        return await attemptFetch(archiveUrl, 15000, "远端压缩包");
-      } catch (error) {
-        if (fallbackUrl && fallbackUrl !== archiveUrl) {
-          log(`${label}远端压缩包较慢，改用站内备用包继续加载`);
-          progress?.update(15, "远端较慢，正在切换站内备用包");
-          return await attemptFetch(fallbackUrl, 15000, "站内备用包");
+      let lastError = null;
+      for (let attemptIndex = 1; attemptIndex <= retries; attemptIndex += 1) {
+        try {
+          return await attemptFetch(archiveUrl, attemptIndex);
+        } catch (error) {
+          lastError = error;
+          if (attemptIndex >= retries) break;
+          const waitMs = Math.min(4000, 800 * attemptIndex);
+          progress?.update(
+            14,
+            `${sourceLabel}第 ${attemptIndex} 次失败，${(waitMs / 1000).toFixed(1)} 秒后重试`
+          );
+          await delay(waitMs);
         }
-        if (error?.name === "AbortError") {
-          throw new Error(`${label}压缩包读取超时，请点击下载按钮`);
-        }
-        throw error;
       }
+
+      if (lastError?.name === "AbortError") {
+        throw new Error(`${label}压缩包连接或下载超时，请稍后重试`);
+      }
+      throw lastError || new Error(`${label}压缩包读取失败`);
     }
 
-    async function loadPlaylistArchive(playlist, archiveUrl, label, fallbackUrl = "", progress = null) {
+    async function loadPlaylistArchive(playlist, archiveUrl, label, progress = null, options = {}) {
       if (typeof JSZip === "undefined") {
         throw new Error("当前页面未加载压缩包解压模块");
       }
-      const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, fallbackUrl, progress);
+      const archiveBuffer = await fetchArchiveBuffer(archiveUrl, label, progress, options);
       progress?.update(62, "正在解析压缩包目录");
       const zip = await JSZip.loadAsync(archiveBuffer);
       const entries = Object.values(zip.files)
@@ -3234,7 +3290,13 @@
       const progress = createProgressLogger(`${label}进度`);
       progress.update(5, "正在准备下载");
       try {
-        const archiveBuffer = await fetchArchiveBuffer(url, label, "", progress);
+        const archiveBuffer = await fetchArchiveBuffer(url, label, progress, {
+          retries: 2,
+          connectTimeoutMs: 15000,
+          stallTimeoutMs: 12000,
+          sourceLabel: "远端压缩包",
+          cacheMode: "default",
+        });
         progress.update(94, "正在生成浏览器下载文件");
         const blob = new Blob([archiveBuffer], { type: "application/zip" });
         const objectUrl = URL.createObjectURL(blob);
@@ -3341,7 +3403,7 @@
       try {
         const playlistUrl = CLOUD_PLAYLIST_URL;
         progress.update(8, "正在读取云端歌单");
-        const response = await fetch(playlistUrl, { cache: "no-store" });
+        const response = await fetch(playlistUrl, { cache: "default" });
         if (!response.ok) {
           throw new Error("云端歌单读取失败");
         }
@@ -3354,8 +3416,14 @@
             playlist,
             resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_SAMPLE_URL),
             "前3首示范舞曲",
-            CLOUD_SAMPLE_FALLBACK_URL,
-            progress
+            progress,
+            {
+              retries: 3,
+              connectTimeoutMs: 15000,
+              stallTimeoutMs: 12000,
+              sourceLabel: "远端压缩包",
+              cacheMode: "default",
+            }
           );
           progress.done(`已导入 ${allSongs().length} 首`);
           return;
@@ -3394,7 +3462,7 @@
       try {
         const playlistUrl = CLOUD_FULL_PLAYLIST_URL;
         progress.update(8, "正在读取云端歌单");
-        const response = await fetch(playlistUrl, { cache: "no-store" });
+        const response = await fetch(playlistUrl, { cache: "default" });
         if (!response.ok) {
           throw new Error("云端全部歌单读取失败");
         }
@@ -3407,8 +3475,14 @@
             playlist,
             resolveCloudAssetUrl(playlist.download_url, playlistUrl, CLOUD_FULL_URL),
             "示范舞曲包",
-            "",
-            progress
+            progress,
+            {
+              retries: 2,
+              connectTimeoutMs: 20000,
+              stallTimeoutMs: 15000,
+              sourceLabel: "远端压缩包",
+              cacheMode: "default",
+            }
           );
           progress.done(`已导入 ${allSongs().length} 首`);
           return;

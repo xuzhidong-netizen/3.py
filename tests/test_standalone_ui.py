@@ -118,6 +118,61 @@ def test_cloud_sample_load_resolves_playlist_relative_archive_url(browser, stati
         page.close()
 
 
+def test_cloud_sample_load_retries_remote_archive(browser, static_server):
+    page = browser.new_page()
+    try:
+        zip_bytes = TOP3_ZIP_PATH.read_bytes()
+        attempts = {"zip": 0}
+
+        page.route(
+            "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/cloud_sample.json",
+            lambda route: route.fulfill(
+                status=200,
+                headers={
+                    "content-type": "application/json; charset=utf-8",
+                    "access-control-allow-origin": "*",
+                },
+                body=json.dumps(
+                    {
+                        "version": 1,
+                        "title": "示例歌单",
+                        "download_url": "./web_static/示范舞曲-top3.zip",
+                        "tracks": [],
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+
+        def handle_zip(route):
+            attempts["zip"] += 1
+            if attempts["zip"] == 1:
+                route.fulfill(status=503, body="retry later")
+                return
+            route.fulfill(
+                status=200,
+                headers={
+                    "content-type": "application/zip",
+                    "access-control-allow-origin": "*",
+                },
+                body=zip_bytes,
+            )
+
+        page.route(
+            "https://xuzhidong-netizen.github.io/2.py/dance_generator_rebuilt/web_static/%E7%A4%BA%E8%8C%83%E8%88%9E%E6%9B%B2-top3.zip",
+            handle_zip,
+        )
+        page.goto(f"{static_server}/standalone.html")
+        page.locator("#loadCloudBtn").click()
+        page.wait_for_function("document.querySelectorAll('#songsBody .song-row').length > 0")
+
+        assert attempts["zip"] == 2
+        assert page.locator("#countStat").inner_text() == "3"
+        assert page.locator("#log .log-entry").first.inner_text().startswith("已从压缩包导入前3首示范舞曲")
+    finally:
+        page.close()
+
+
 def test_import_clear_buttons_reset_picker_values(browser, static_server):
     page = browser.new_page()
     try:
