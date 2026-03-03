@@ -217,6 +217,15 @@ def test_song_table_has_pagination_controls() -> None:
     assert 'id="songsPagination"' in html
 
 
+def test_stage_page_has_paginated_scroll_layout() -> None:
+    html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
+
+    assert "data-stage-page-size" in html
+    assert "stage-board-scroll" in html
+    assert "focusCurrentStageSong" in html
+    assert "STAGE_PAGE_SIZE_OPTIONS = [20, 50, 100]" in html
+
+
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
     page = browser.new_page()
     try:

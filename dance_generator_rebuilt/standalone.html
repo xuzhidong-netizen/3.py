@@ -3150,7 +3150,7 @@
       min-height: 100vh;
       color: var(--ink);
       position: relative;
-      overflow-x: hidden;
+      overflow: hidden;
       font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", sans-serif;
       background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       transition: background 400ms ease, color 240ms ease;
@@ -3275,11 +3275,16 @@
     #app {
       position: relative;
       z-index: 1;
+      height: 100vh;
     }
     .stage-shell {
+      height: 100vh;
+      min-height: 100vh;
       padding: 32px;
       display: grid;
       gap: 24px;
+      grid-template-rows: auto auto auto auto minmax(0, 1fr);
+      overflow: hidden;
     }
     .stage-hero {
       display: grid;
@@ -3287,7 +3292,7 @@
       gap: 24px;
       align-items: stretch;
     }
-    .stage-copy, .stage-now, .stage-section, .theme-panel {
+    .stage-copy, .stage-now, .stage-section, .theme-panel, .stage-board-panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 28px;
@@ -3384,6 +3389,99 @@
       gap: 12px;
       flex-wrap: wrap;
     }
+    .stage-board-panel {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+    }
+    .stage-board-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-wrap: wrap;
+    }
+    .stage-board-title {
+      display: grid;
+      gap: 8px;
+    }
+    .stage-board-title p {
+      margin: 0;
+    }
+    .stage-board-title h3 {
+      font-size: clamp(26px, 2.6vw, 34px);
+    }
+    .stage-board-title span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .stage-board-tools {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .stage-page-size {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .stage-page-size select {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+    }
+    .stage-page-size option {
+      color: #1d231f;
+    }
+    .stage-pagination {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .stage-pagination button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 40px;
+      padding: 8px 16px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--ink);
+      background: rgba(255,255,255,0.12);
+      cursor: pointer;
+    }
+    .stage-pagination button[disabled] {
+      opacity: 0.48;
+      cursor: default;
+    }
+    .stage-pagination span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .stage-board-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 20px 22px;
+      display: grid;
+      gap: 18px;
+      scrollbar-gutter: stable both-edges;
+    }
     .stage-controls {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -3474,10 +3572,6 @@
       border: 1px solid var(--chip-border);
       color: color-mix(in srgb, var(--ink) 90%, var(--accent) 10%);
     }
-    .stage-board {
-      display: grid;
-      gap: 18px;
-    }
     .stage-section {
       padding: 20px;
       animation: sectionLift 480ms ease both;
@@ -3551,15 +3645,33 @@
       to { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+      #app,
+      .stage-shell {
+        height: auto;
+        min-height: 100vh;
+      }
       .stage-shell { padding: 18px; }
       .stage-hero { grid-template-columns: 1fr; }
       .stage-controls { grid-template-columns: 1fr 1fr; }
       .theme-grid { grid-template-columns: 1fr 1fr; }
+      .stage-board-head { padding: 20px 18px 16px; }
+      .stage-board-tools { justify-content: flex-start; }
       .stage-table { min-width: 720px; display: block; overflow-x: auto; }
     }
     @media (max-width: 640px) {
       .stage-controls { grid-template-columns: 1fr; }
       .theme-grid { grid-template-columns: 1fr; }
+      .stage-board-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .stage-board-tools,
+      .stage-pagination {
+        justify-content: flex-start;
+      }
     }
   </style>
 </head>
@@ -3573,6 +3685,11 @@
     const controlChannel = "BroadcastChannel" in window ? new BroadcastChannel("dance-stage-control") : null;
     let currentTheme = "default";
     let themePanelOpen = false;
+    let stageTablePage = 1;
+    let stageTablePageSize = 20;
+    let currentStagePayload = initialPayload;
+    let lastAutoSongIndex = -1;
+    const STAGE_PAGE_SIZE_OPTIONS = [20, 50, 100];
     function escapeHtml(value) {
       return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
@@ -3607,17 +3724,126 @@
         });
       });
     }
+    function flattenStageSongs(payload) {
+      const refs = [];
+      (payload.parts || []).forEach((part, partIndex) => {
+        (part.music || []).forEach((song, songIndex) => {
+          refs.push({ part, partIndex, song, songIndex });
+        });
+      });
+      return refs;
+    }
+    function clampStagePage(totalSongs) {
+      if (!STAGE_PAGE_SIZE_OPTIONS.includes(stageTablePageSize)) {
+        stageTablePageSize = 20;
+      }
+      const totalPages = Math.max(1, Math.ceil(totalSongs / stageTablePageSize));
+      stageTablePage = Math.min(Math.max(1, stageTablePage), totalPages);
+      return totalPages;
+    }
+    function syncStagePageToCurrentSong(flatSongs, payload) {
+      const currentSongIndex = Number(payload.currentAudioIndex);
+      if (!Number.isInteger(currentSongIndex) || currentSongIndex < 0) {
+        return;
+      }
+      if (currentSongIndex === lastAutoSongIndex) {
+        return;
+      }
+      const visibleIndex = flatSongs.findIndex((ref) => Number(ref.song?.index ?? (ref.song?.num - 1)) === currentSongIndex);
+      if (visibleIndex === -1) {
+        return;
+      }
+      stageTablePage = Math.floor(visibleIndex / stageTablePageSize) + 1;
+      lastAutoSongIndex = currentSongIndex;
+    }
+    function buildStageSectionsMarkup(visibleRefs) {
+      if (!visibleRefs.length) {
+        return '<div class="stage-empty">当前这一页还没有舞曲</div>';
+      }
+      const sections = [];
+      let currentPartIndex = -1;
+      visibleRefs.forEach(({ part, partIndex, song }, index) => {
+        if (partIndex !== currentPartIndex) {
+          currentPartIndex = partIndex;
+          sections.push({
+            title: part.part_title || ('分场' + (partIndex + 1)),
+            duration: part.duration || '',
+            rows: [],
+          });
+        }
+        const currentSection = sections[sections.length - 1];
+        currentSection.rows.push(
+          '<tr class="' + (song.is_playing ? 'is-playing' : '') + '" data-stage-song-index="' + String(song.index ?? (song.num - 1)) + '">' +
+            '<td>' + String(song.num).padStart(2, '0') + '</td>' +
+            '<td>' + escapeHtml(song.dance || '未分类') + '</td>' +
+            '<td>' + escapeHtml(song.title || '未命名') + '</td>' +
+            '<td>' + (song.choose ? '点播' : '-') + '</td>' +
+            '<td>' + escapeHtml(song.duration) + '</td>' +
+          '</tr>'
+        );
+      });
+      return sections.map((section) =>
+        '<section class="stage-section">' +
+          '<div class="stage-section-head"><h3>' + escapeHtml(section.title) + '</h3><span>' + escapeHtml(section.duration) + '</span></div>' +
+          '<table class="stage-table"><thead><tr><th>序号</th><th>舞种</th><th>舞曲</th><th>点播</th><th>时长</th></tr></thead><tbody>' + section.rows.join('') + '</tbody></table>' +
+        '</section>'
+      ).join('');
+    }
+    function bindStageTableControls() {
+      const pageSize = document.querySelector('[data-stage-page-size]');
+      if (pageSize) {
+        pageSize.addEventListener('change', () => {
+          stageTablePageSize = Number(pageSize.value) || 20;
+          stageTablePage = 1;
+          lastAutoSongIndex = -1;
+          render(currentStagePayload);
+        });
+      }
+      const pagination = document.querySelector('[data-stage-pagination]');
+      if (pagination) {
+        pagination.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-stage-page-action]');
+          if (!button || button.disabled) return;
+          if (button.dataset.stagePageAction === 'prev' && stageTablePage > 1) {
+            stageTablePage -= 1;
+          } else if (button.dataset.stagePageAction === 'next') {
+            stageTablePage += 1;
+          }
+          render(currentStagePayload);
+        });
+      }
+    }
+    function focusCurrentStageSong() {
+      const boardScroll = document.querySelector('[data-stage-board-scroll]');
+      const currentRow = boardScroll?.querySelector('tr.is-playing');
+      if (!boardScroll || !currentRow) return;
+      currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     function render(payload) {
+      currentStagePayload = payload;
       const themeButtons = stageThemes.map((theme) =>
         '<button type="button" class="theme-option ' + (theme.id === currentTheme ? 'is-active' : '') + '" data-stage-theme="' + escapeHtml(theme.id) + '"><strong>' + escapeHtml(theme.label) + '</strong><span>' + escapeHtml(theme.note) + '</span></button>'
       ).join("");
       const activeTheme = findTheme(currentTheme);
       const summary = (payload.summaryLines || []).map(line => '<span class="stage-chip">' + escapeHtml(line) + '</span>').join("");
-      const sections = (payload.parts || []).map((part, partIndex) => {
-        const songs = (part.music || []).map(song => '<tr class="' + (song.is_playing ? 'is-playing' : '') + '" data-stage-song-index="' + String(song.index ?? (song.num - 1)) + '"><td>' + String(song.num).padStart(2, '0') + '</td><td>' + escapeHtml(song.dance || '未分类') + '</td><td>' + escapeHtml(song.title || '未命名') + '</td><td>' + (song.choose ? '点播' : '-') + '</td><td>' + escapeHtml(song.duration) + '</td></tr>').join("");
-        return '<section class="stage-section"><div class="stage-section-head"><h3>' + escapeHtml(part.part_title || ('分场' + (partIndex + 1))) + '</h3><span>' + escapeHtml(part.duration || '') + '</span></div><table class="stage-table"><thead><tr><th>序号</th><th>舞种</th><th>舞曲</th><th>点播</th><th>时长</th></tr></thead><tbody>' + songs + '</tbody></table></section>';
-      }).join("");
-      document.getElementById("app").innerHTML = '<div class="stage-shell"><section class="stage-hero"><div class="stage-copy"><p class="stage-eyebrow">Live Dance Screen</p><h1>' + escapeHtml(payload.meta?.title || '青春舞会舞曲') + '</h1><p class="stage-meta">' + escapeHtml((payload.meta?.club || '') + ' ' + (payload.meta?.place || '')) + '</p><p class="stage-meta">' + escapeHtml([payload.meta?.date, ...((payload.meta?.time || []).filter(Boolean))].filter(Boolean).join(' ')) + '</p></div><div class="stage-now ' + (payload.totalSongs ? 'is-live' : '') + '"><span class="stage-now-label">当前播放</span><strong>' + escapeHtml(payload.currentSongLabel || '等待播放') + '</strong><em>共 ' + escapeHtml(payload.totalSongs || 0) + ' 首 / 总时长 ' + escapeHtml(payload.totalDuration || '00:00') + '</em><div class="stage-next"><span>下一首预告</span><strong>' + escapeHtml(payload.nextSongLabel || '等待排曲') + '</strong></div></div></section><section class="stage-controls"><button type="button" data-stage-link="home">返回主页面</button><button type="button" data-stage-action="prev">上一首</button><button type="button" data-stage-action="toggle">' + (payload.isPaused ? '播放' : '暂停') + '</button><button type="button" data-stage-action="sequence">' + (payload.sequenceMode ? '顺播中' : '顺序播放') + '</button><button type="button" data-stage-action="next">下一首</button><button type="button" data-theme-toggle>' + (themePanelOpen ? '收起风格' : '风格调整') + '</button></section><section class="theme-panel ' + (themePanelOpen ? 'is-open' : '') + '" data-theme-panel><div class="theme-panel-head"><strong data-theme-current>当前风格：' + escapeHtml(activeTheme.label) + '</strong><span>默认风格 + 5 套动态主题</span></div><div class="theme-grid">' + themeButtons + '</div></section><section class="stage-summary">' + (summary || '<span class="stage-chip">等待舞曲数据</span>') + '</section><section class="stage-board">' + (sections || '<div class="stage-empty">当前还没有可展示的舞曲列表</div>') + '</section></div>';
+      const flatSongs = flattenStageSongs(payload);
+      syncStagePageToCurrentSong(flatSongs, payload);
+      const totalPages = clampStagePage(flatSongs.length);
+      const startIndex = (stageTablePage - 1) * stageTablePageSize;
+      const visibleRefs = flatSongs.slice(startIndex, startIndex + stageTablePageSize);
+      const sections = buildStageSectionsMarkup(visibleRefs);
+      const pageSizeOptions = STAGE_PAGE_SIZE_OPTIONS.map((size) => '<option value="' + size + '"' + (size === stageTablePageSize ? ' selected' : '') + '>' + size + ' 首</option>').join('');
+      const pageNote = flatSongs.length
+        ? '第 ' + stageTablePage + ' / ' + totalPages + ' 页 · 共 ' + flatSongs.length + ' 首'
+        : '当前没有舞曲';
+      document.getElementById("app").innerHTML =
+        '<div class="stage-shell">' +
+          '<section class="stage-hero"><div class="stage-copy"><p class="stage-eyebrow">Live Dance Screen</p><h1>' + escapeHtml(payload.meta?.title || '青春舞会舞曲') + '</h1><p class="stage-meta">' + escapeHtml((payload.meta?.club || '') + ' ' + (payload.meta?.place || '')) + '</p><p class="stage-meta">' + escapeHtml([payload.meta?.date, ...((payload.meta?.time || []).filter(Boolean))].filter(Boolean).join(' ')) + '</p></div><div class="stage-now ' + (payload.totalSongs ? 'is-live' : '') + '"><span class="stage-now-label">当前播放</span><strong>' + escapeHtml(payload.currentSongLabel || '等待播放') + '</strong><em>共 ' + escapeHtml(payload.totalSongs || 0) + ' 首 / 总时长 ' + escapeHtml(payload.totalDuration || '00:00') + '</em><div class="stage-next"><span>下一首预告</span><strong>' + escapeHtml(payload.nextSongLabel || '等待排曲') + '</strong></div></div></section>' +
+          '<section class="stage-controls"><button type="button" data-stage-link="home">返回主页面</button><button type="button" data-stage-action="prev">上一首</button><button type="button" data-stage-action="toggle">' + (payload.isPaused ? '播放' : '暂停') + '</button><button type="button" data-stage-action="sequence">' + (payload.sequenceMode ? '顺播中' : '顺序播放') + '</button><button type="button" data-stage-action="next">下一首</button><button type="button" data-theme-toggle>' + (themePanelOpen ? '收起风格' : '风格调整') + '</button></section>' +
+          '<section class="theme-panel ' + (themePanelOpen ? 'is-open' : '') + '" data-theme-panel><div class="theme-panel-head"><strong data-theme-current>当前风格：' + escapeHtml(activeTheme.label) + '</strong><span>默认风格 + 5 套动态主题</span></div><div class="theme-grid">' + themeButtons + '</div></section>' +
+          '<section class="stage-summary">' + (summary || '<span class="stage-chip">等待舞曲数据</span>') + '</section>' +
+          '<section class="stage-board-panel"><div class="stage-board-head"><div class="stage-board-title"><p class="stage-eyebrow">Dance Table</p><h3>分场舞曲表</h3><span>当前播放会自动跳到所在分页，上方舞曲信息会始终固定显示。</span></div><div class="stage-board-tools"><label class="stage-page-size"><span>每页显示</span><select data-stage-page-size>' + pageSizeOptions + '</select></label><div class="stage-pagination" data-stage-pagination><button type="button" data-stage-page-action="prev"' + (stageTablePage <= 1 ? ' disabled' : '') + '>上一页</button><span>' + pageNote + '</span><button type="button" data-stage-page-action="next"' + (stageTablePage >= totalPages ? ' disabled' : '') + '>下一页</button></div></div></div><div class="stage-board-scroll" data-stage-board-scroll>' + sections + '</div></section>' +
+        '</div>';
       document.querySelectorAll('[data-stage-link="home"]').forEach((button) => {
         button.addEventListener('click', () => {
           if (window.opener && !window.opener.closed) {
@@ -3639,8 +3865,10 @@
           if (controlChannel) controlChannel.postMessage({ action: 'play_song', index: Number(row.dataset.stageSongIndex) });
         });
       });
+      bindStageTableControls();
       wireThemeControls();
       applyTheme(currentTheme);
+      focusCurrentStageSong();
     }
     window.renderStagePage = render;
     render(initialPayload);
