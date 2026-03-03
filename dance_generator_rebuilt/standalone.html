@@ -47,6 +47,7 @@
       display: grid;
       gap: 16px;
       align-content: start;
+      min-width: 0;
     }
 
     .card {
@@ -56,6 +57,8 @@
       border: 1px solid rgba(255,255,255,0.68);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
+      min-width: 0;
+      width: 100%;
     }
 
     h1, h2 { margin: 0; font-family: "Source Han Serif SC", "Noto Serif SC", serif; }
@@ -372,6 +375,9 @@
       border-radius: 12px;
       border: 1px solid var(--line);
       background: rgba(255,255,255,0.68);
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .issue.error { background: rgba(178,58,51,0.08); border-color: rgba(178,58,51,0.24); }
@@ -647,6 +653,8 @@
       max-height: 270px;
       overflow: auto;
       padding-right: 4px;
+      min-width: 0;
+      scrollbar-gutter: stable;
     }
 
     @keyframes snapshotSweep {
