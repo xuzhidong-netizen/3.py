@@ -205,10 +205,18 @@ def test_large_import_uses_fast_mode_guards() -> None:
     assert "const IMPORT_YIELD_INTERVAL = 20;" in html
     assert "const IMPORT_GUARD_STALL_MS = 8000;" in html
     assert "const IMPORT_GUARD_LOG_INTERVAL_MS = 4000;" in html
+    assert "const IMPORT_AUTO_RESTART_STALL_MS = 16000;" in html
+    assert "const IMPORT_AUTO_RESTART_LIMIT = 1;" in html
+    assert "const IMPORT_AUTO_RESTART_DELAY_MS = 1200;" in html
     assert "已启用大批量快速模式：分批解析、跳过逐首时长探测，优先保证页面稳定" in html
-    assert "function createTaskGuard(label, progress = null)" in html
+    assert "function createImportRestartError(message = \"导入任务已由保护机制自动重启\")" in html
+    assert "function ensureImportRunActive(runId)" in html
+    assert "function createTaskGuard(label, progress = null, options = {})" in html
     assert "保护中：" in html
-    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null)" in html
+    assert "准备自动重启" in html
+    assert "读取舞曲卡住，保护机制将在" in html
+    assert "读取舞曲自动重启后已恢复成功" in html
+    assert "async function importDirectoryFiles(files, progress = null, parseOptions = {}, guard = null, runId = 0)" in html
     assert "backgroundLibrarySync: fastMode" in html
     assert "舞曲库同步将在后台继续" in html
     assert "song.url = URL.createObjectURL(song.file);" in html
