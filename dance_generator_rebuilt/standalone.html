@@ -206,6 +206,19 @@
       background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(245, 235, 224, 0.72));
     }
 
+    .import-drop-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .import-drop-copy {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
     .import-drop strong {
       font-size: 17px;
     }
@@ -213,6 +226,18 @@
     .import-drop span {
       color: var(--muted);
       line-height: 1.6;
+    }
+
+    .import-clear-btn {
+      min-width: 88px;
+      min-height: 40px;
+      padding: 8px 14px;
+      font-size: 13px;
+      box-shadow: none;
+      background: rgba(255,255,255,0.84);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      flex: 0 0 auto;
     }
 
     .control-sections {
@@ -722,16 +747,26 @@
 
       <section class="card">
         <div class="import-grid">
-          <label class="import-drop">
-            <strong>导入舞曲目录</strong>
-            <span>直接选择本地文件夹，保留目录结构并自动按目录归类分场。</span>
+          <div class="import-drop">
+            <div class="import-drop-head">
+              <div class="import-drop-copy">
+                <strong>导入舞曲目录</strong>
+                <span>直接选择本地文件夹，保留目录结构并自动按目录归类分场。</span>
+              </div>
+              <button id="clearFileInputBtn" class="import-clear-btn" type="button">清空选择</button>
+            </div>
             <input id="fileInput" type="file" webkitdirectory multiple>
-          </label>
-          <label class="import-drop">
-            <strong>导入 ZIP 压缩包</strong>
-            <span>在浏览器内解压后导入，只提取可用音频文件，不保留原始压缩包。</span>
+          </div>
+          <div class="import-drop">
+            <div class="import-drop-head">
+              <div class="import-drop-copy">
+                <strong>导入 ZIP 压缩包</strong>
+                <span>在浏览器内解压后导入，只提取可用音频文件，不保留原始压缩包。</span>
+              </div>
+              <button id="clearArchiveInputBtn" class="import-clear-btn" type="button">清空选择</button>
+            </div>
             <input id="archiveInput" type="file" accept=".zip,application/zip" multiple>
-          </label>
+          </div>
         </div>
         <div class="fields">
           <label>
@@ -981,7 +1016,7 @@
     }
 
     function initEls() {
-      ["fileInput","archiveInput","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder"].forEach(id => els[id] = $(id));
+      ["fileInput","archiveInput","clearFileInputBtn","clearArchiveInputBtn","titleInput","authorInput","clubInput","placeInput","dateInput","weekdayInput","timeInput","countStat","durationStat","distributionList","issues","issueCount","log","feedbackTitleInput","feedbackBodyInput","submitIssueBtn","openIssuesBtn","songsBody","player","preview","snapshotCaption","snapshotStage","snapshotPlaceholder"].forEach(id => els[id] = $(id));
     }
 
     function initDefaults() {
@@ -3047,6 +3082,18 @@
       }, 120);
     }
 
+    function clearPendingAutoLoad() {
+      if (!autoLoadTimer) return;
+      window.clearTimeout(autoLoadTimer);
+      autoLoadTimer = null;
+    }
+
+    function clearImportSelection(inputEl, label) {
+      clearPendingAutoLoad();
+      inputEl.value = "";
+      log(`已清空${label}选择`);
+    }
+
     async function loadCloudSample() {
       log("正在加载云端前3首示例舞曲...");
       const response = await fetch(CLOUD_PLAYLIST_URL, { cache: "no-store" });
@@ -3144,6 +3191,8 @@
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
       els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲目录"));
       els.archiveInput.addEventListener("change", () => scheduleAutoLoad("ZIP 压缩包"));
+      els.clearFileInputBtn.addEventListener("click", () => clearImportSelection(els.fileInput, "舞曲目录"));
+      els.clearArchiveInputBtn.addEventListener("click", () => clearImportSelection(els.archiveInput, "ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已为你下载前3首示范舞曲压缩包`);
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
