@@ -3208,6 +3208,7 @@
     }
 
     function deleteAllSongs() {
+      clearPendingAutoLoad();
       cleanupSongUrls();
       state.parts = [{ part_title: "", music: [] }];
       state.issues = [];
