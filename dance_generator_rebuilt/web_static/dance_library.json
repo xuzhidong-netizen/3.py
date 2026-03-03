@@ -1,7 +1,1872 @@
 {
   "version": 1,
-  "updated_at": "2026-03-03T08:47:40.039Z",
+  "updated_at": "2026-03-03T08:49:06.646Z",
   "songs": [
+    {
+      "title": "0ein kleines lied",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "13131-陈琳",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "2010舞林大会比赛用曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "2999年的圣诞节",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "3：21",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "3650-Twins",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "38号大迪曲-好妹妹乐队,陈粒",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "3年的爱-金贤政",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "3BOYS-花花公子",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "7年的爱-金贤政",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "阿萨-乌龟组合韩语",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "啊哈-斯琴高丽",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱-小虎队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱的水晶鞋-韩雪",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱疯舞-崔子格&三块石&赖伟锋",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱就爱了",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱啦啦-海楠",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱情大魔咒-赵薇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱情大魔咒&耍太极",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱情教主",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱情女神",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "爱笑的女孩-婷汐",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "巴啦啦小魔仙-大小ann",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "巴萨之歌",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "拜访春天-张清芳",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "北京小妞-孙佳星",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "蹦蹦蹦",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "毕业季-莫熙儿",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "表白-萧亚轩",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "冰河时代(新版新作)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "不怕不怕 3.25",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "不说再见-好妹妹乐队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "不要爱上她-李孝利",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "布娃娃",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "彩虹的微笑-王心凌",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "草蜢-失恋",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "叉烧包-周蕙",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "超时空要塞",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "初恋-回春丹",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "揣摩-王菀之",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "春暖花开",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "纯真时代-李宇春",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "聪明的一休",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "锉冰进行曲-阿雅",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "大家来恋爱",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "大家来跳西部舞",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "大女人-张宇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "大奇葩-《奇葩说》剪版",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "大约在冬季(女声)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "单车岁月",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "当美女",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "第七元素-vitas",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "叮咚-徐怀钰",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "东西南北风",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "咚吧啦-周鹏",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "动感慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "动感舞曲-爱DJ音乐夏天推荐",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "独一无二",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "对不起，只是忽然很想你-李宇春",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "儿歌串烧(哇哈哈+打电话+小木马+小红帽+好阿姨+劳动最光荣)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "法国慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "扉をあけて《百变小樱》-ANZA",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "凤凰传奇-最炫民族风",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "感到幸福你就拍拍手-凤凰传奇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "歌声与微笑-小蓓蕾组合",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "光るなら-《四月是你的谎言》",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "光るなら《四月是你的谎言》-Goose house",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "好春光",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "好想大声说爱你《灌篮高手》-Baad",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "好想谈恋爱-邵雨涵",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "好心情-李玟",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "河合奈保子-UNバランス",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "红烧鸡翅-王蓉",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "花儿与少年-群星",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "花花宇宙-陈慧琳",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "幻意大利慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "煌めく瞬间 (とき) に捕らわれて-MANISH",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "加速度-瞿颖",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "交织together-泠鸢yousa,Hanser,DMYoung",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "交织together(3分28秒)-泠鸢yousa,Hanser,DMYoung",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "结婚好吗-李升基",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "经典酒巴吧舞曲慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "啾咪啾咪-卓文萱",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "就现在",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "决定爱你-徐若瑄",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "君の知らない物語",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "看上她",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "可以做主页的DJ音乐",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "口香糖-梁咏琪",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "快点告诉你-苑冉",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "快乐阿拉蕾",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "快乐崇拜",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "快乐你懂的-快乐家族",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "快请我跳舞-梦幻想组合",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "啦啦",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "老友记 I'll There For You!-The Rembrandts",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "流行迪吧音乐",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "洛天依投食歌-洛天依",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "马上有钱-朱贝贝",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "玛利亚-金雅中",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "玛利亚吹口哨",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "慢速迪曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "慢摇舞曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "美",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "美丽新世界-S.H.E",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "萌萌哒-童可可",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "夢想歌-Suara",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "迷幻意大利慢摇超赞慢嗨",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "妙龄童-陈粒",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "魔力无限",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "木星冲浪手-白日密语",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "目标是神奇宝贝大师.",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "牧马人-杨坤",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "那一夜-罗百吉",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "男人简单就好",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "你是偶像(湖南卫视《偶像来了》主题曲)宁静&谢娜&杨钰莹&林青霞&朱茵&蔡少芬&张含韵&赵丽颖&欧阳娜娜&古力娜扎",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "你要跳舞吗-新裤子乐队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "你hold住吗-陈兴瑜",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "女皇驾到-石欣卉",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "暖暖的小时光-可乐就是力量",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "奇迹再现《迪迦奥特曼》-毛毛",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "汽车慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "前尘-sing女团",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "青春不打烊-王梓钰",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "青春修炼手册-Tfboys",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "请我跳舞(中文版)-蔡妍",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "热爱105度的你-阿肆",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "热浪-温岚",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "日不落-蔡依林",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "赛拉维-安子与九妹",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "上海之恋-Orange Caramel",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "谁不乖英文版",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "什么态度",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "神様の神様",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "十年-DJ版",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "十三号星期舞-蔡依林",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "世界上的另一个我-阿肆 _ 郭采洁",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "耍太极",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "誰も知らない",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "说谎",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "思密达-王麟",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "苏荷气氛",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "苏珊娜",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "酸酸甜甜就是我-张含韵",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "碎碎恋-陈学冬",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "他夏了夏天-苏打绿",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "踏浪",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "天马行空(短)-郝云",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "天上的西藏",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "天涯",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "同伴者-郑东河",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "完美夏天-霓虹花园",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "玩腻",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "万花瞳-蔡依林",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "王见王罗志祥&杨丞琳",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我爱你 我的生活-海底时光机",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我爱你-王麟",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我不是公主",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我叫MT",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我讨厌你-朴灿烈&袁姗姗",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "我想我是疯了-李升基",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "午夜DJ",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "舞厅专用中英文小串烧",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "舞一舞丫丫-朱安禹",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "喜欢-阿肆",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "喜欢你的味道",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "香帅帅-花儿乐队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "香榭大道-谢金燕",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "香烟爱上火柴-王绎龙",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "想你想你-王心凌",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "想去海边-夏日入侵企画",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "小毛驴&种太阳-小蓓蕾组合",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "小手拉大手",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "小小鹿-西瓜Kune",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "心中有曲自然嗨",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "新年快乐-小虎队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "幸福花儿开-乌兰托娅",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "幸福最晴天-郭静",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "幸运符号-Tfboys",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "选择题-莫文蔚",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "眼泪簌簌-孙丹菲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "阳光宅男-周杰伦",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "要疯了-Teen Top",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "也许是爱-蔡妍",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "一起跳舞-吉娜",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "一起跳舞吧-蜜蜂少女队",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "一起摇摆-汪峰",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "意大利口哨",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "永久のキズナ-日韩群星",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "与爱为邻-范玮琪",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "遇见(高耀太)-李升基",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "约定-汪东城&蔡旻佑",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "这节奏很High慢摇舞曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "致姗姗来迟的你-阿肆&林宥嘉",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "猪猪非主流歌曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "自由自在-凤凰传奇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "自作多情-周慧敏",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "走过咖啡屋-千百惠",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "足球小将 燃烧的英雄-日文版",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "最好的一天-五月天",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "最强のフュージョン《龙珠剧场版》-V.A",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "最炫民族风-凤凰传奇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "坐上火车去拉萨",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "A Brand New Day-Lisa Miskovsky",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "A Never Ending Dream",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "AKB48-さよならクロール",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "All-American Girl",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "ANOTHER SATURDAY NIGHT",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Ascendance-Lindsey Stirling",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "ATC-Around the World (La la la la La)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "ba yonga wamba",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "baby baby",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "balla da li",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Banaroo-Ba Yonga Wamba",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Barbie Girl-Aqua",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Beautiful Things Remix feat. Amanda Diva-西原健一郎",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Best Is Yet To Come-LuvBug",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "big bag",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Blame It On The Girls-Mika",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Blue-BingBang",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Boom Boom Boom",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "boys",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "brave heart-《数码宝贝》",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Break Your Heart",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Butter-fly(《数码宝贝》片头曲)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Butterfly-smile",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "can t get you out of my mind-banaroo",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Catch You Catch Me-Yun",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Ch!pz-One, Two, Three!",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Cheap Thrills-Sia,Sean Paul",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Chuck Berry-Big Boys",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Colder Than Ice-Grant Miller",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "comsic ride",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Crazy Frog Video Mix",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Crazy World-Michael Learns To Rock",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Crooked-G",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Cry For You",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "cu capul in nori",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Cyberangel-Hanser",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Dali-ムーンライト伝説",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "DAN DAN 心魅かれてく《龙珠GT》-FIELD OF VIEW",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Dance Again-Jennifer Lopez",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Dance In The Dark-Lady Gaga",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "dang bala",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Despre Tine-O Zone",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Die Young",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "DJ舞曲-汽车慢摇",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Do You Beieve in Love",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "doobedoo",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Drive By-Train",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "dubedu",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Ein Kleines Lied",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Everybody Get Up",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Faded(雨声环绕)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Feliz Navidad-Banar",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "feliz navidad-JJ Little & The Holly Dollies",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Firework-Katy Perry",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "fly away",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "For The Light-Cargo",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Gee-少女时代",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Get Outta My Way",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "go around",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "GO FOR IT!!-西野加奈",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Golden Sky-Smile.DK",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Good As You",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Got Me Good-Agnes",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Halloween-King Diamond",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Happy Happy-宋宝岚",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Happy Song-西野加奈",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Heart-TFboys",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Heaven Is A Place On Earth-Belinda Carlisle",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "honey-王心凌",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I dont know-嗨爽",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I Love You Forever-Jewel",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I Miss You-Basshunter",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I wonder why-花澤香菜",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I'd Rather Dance With You-Kings of Convenience",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "I'm sorry-CNBLUE",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Ich Hab Dich Lieb Album",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "If It Weren't For Love",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "in the name of love-小桥",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Insomnia",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "It's Summer Now-Beatnerz  LaJo Hoski",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Jar of Love-曲婉婷",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Josh Turner",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Just About Enough-Sarina Paris",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Keith Urban,Carrie Underwood-The Fighter",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "kiss",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "kiss me",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "kissy kissy-B2",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Kissy Kissy-Smile Dk",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "KNOCK KNOCK-TWICE",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Koko Soko-Smile.Dk",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Kylie Minogue-Get Outta My Way",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Lady GaGa-Bad Romance",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Last Christmas-Taylor Swift",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Lemon Tree",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Lemon Tree-苏慧伦",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Let's Talk About A Man-Prezioso",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "light",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "lonely",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "lotusblume-德国欢快舞曲",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "love me",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "love of my life",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Love Of My Life-Yoomiii",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "lucky",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Marry You-Bruno Mars",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Marry You-Glee Cast",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "michelle hunziker Little Lies-Michelle Hunziker",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Moves Like Jagger-Maroon 5",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "My First Kiss-敏雅",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "MY oh MY",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "New Boy-房东的猫",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "oath sign",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Oh Suzanna",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "On Our Way-The Royal Concept",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "One Two Three-Chipz",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Owl CityCarly Rae Jepsen-Good Time",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Part Of Me-Katy Perry",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "party girl",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Pray《银魂》-Huge米米翻唱",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Proud Of You(《挥着翅膀的女孩》英文版)-冯曦妤",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Red-Taylor Swift",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Rhythm Of Love",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Rihanna(蕾哈娜)-Disturbia",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Rose-李夏怡",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Santana-Mama Maria",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Selfie Le Le Re-Vishal Dadlani",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Set Fire To The Rain-Adele",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Skaeboad",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Space Cowboy-Banar",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Sugar-Maroon 5",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "summertime-cinnamons,evening cinema",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Sunshine In The Rain-Bwo",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Superhero",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "take me to dance",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Tarzam & Jane(泰山与珍妮)-Toy Box",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "taste of home",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Telephone-Lady GaGa",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Tell Me Tell Me-Rainbow",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "The Fox-Ylvis",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "The Hampster Dance Song",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "The One That Got Away-Katy Perry",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "This Ain't What Love Is About-A1",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "This is how we do it",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "this is my dj",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "This Is The Night",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "this one for you",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Three some is my fantasy",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Timber-Pitbull、ke$ha",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "To Be Or Not To Be",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Together-高耀太",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Try Everything-Shakira",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Ulysse-Ridan",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Una Noche MAS-Jennifer Lopez",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Waka Waka",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Waka Waka (This Time for Africa)-Shakira,Freshlyground",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Wake (Studio Version)-Hillsong Young And Free",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Wake Up-Hilary Duff",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Walking in the sun",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "walking in the sun(慢)",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "we just laugh about it",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "When Can I See You Again-Owl City",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Who Let The Dogs Out",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "Wild Wild Web-John The Whistler",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "You Belong With Me-Taylor Swift",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "You Promised Me",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "おどるポンポコリン-B.B.クイーンズ",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "ツキアカリのミチシルベ-《黒之契约着2流行的双子》",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "バージンロードで待っていて-小仓唯",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "バーテンダー",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "プロセス",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
+    {
+      "title": "ペガサス幻想-MAKE",
+      "dance": "平四",
+      "updated_at": "2026-03-03T08:49:06.646Z"
+    },
     {
       "title": "-张靓颖&王铮亮",
       "dance": "伦巴",
