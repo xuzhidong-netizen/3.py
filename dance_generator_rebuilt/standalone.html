@@ -790,7 +790,7 @@
             </div>
           </div>
         </div>
-        <p class="hint import-note">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；读取文件后会自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传本地音频文件。</p>
+        <p class="hint import-note">说明：浏览器版支持直接导入本地舞曲目录，也支持在浏览器里解压 ZIP 后导入；选中文件后会自动开始读取，并自动尝试把识别出的舞种和舞曲名同步到舞曲库，但不会上传本地音频文件。</p>
       </section>
 
       <section class="card">
@@ -953,6 +953,7 @@
     let stageChannel = null;
     let stageControlChannel = null;
     let nextLocalSongId = 1;
+    let autoLoadTimer = null;
 
     function $(id) { return document.getElementById(id); }
 
@@ -3025,7 +3026,25 @@
       state.issues = [];
       renderAll();
       log(`已读取 ${allSongs().length} 首舞曲`);
+      els.fileInput.value = "";
+      els.archiveInput.value = "";
       await syncSongsToDanceLibrary("读取文件");
+    }
+
+    function scheduleAutoLoad(sourceLabel) {
+      const hasAudio = [...els.fileInput.files].some(file => AUDIO_FILE_PATTERN.test(file.name));
+      const hasArchive = [...els.archiveInput.files].some(file => /\.zip$/i.test(file.name));
+      if (!hasAudio && !hasArchive) {
+        return;
+      }
+      if (autoLoadTimer) {
+        window.clearTimeout(autoLoadTimer);
+      }
+      autoLoadTimer = window.setTimeout(() => {
+        autoLoadTimer = null;
+        log(`已选择${sourceLabel}，开始自动读取舞曲`);
+        loadFiles().catch(err => log(err.message));
+      }, 120);
     }
 
     async function loadCloudSample() {
@@ -3123,6 +3142,8 @@
 
     function bindTopActions() {
       $("loadBtn").addEventListener("click", () => loadFiles().catch(err => log(err.message)));
+      els.fileInput.addEventListener("change", () => scheduleAutoLoad("舞曲目录"));
+      els.archiveInput.addEventListener("change", () => scheduleAutoLoad("ZIP 压缩包"));
       $("loadCloudBtn").addEventListener("click", () => loadCloudSample().catch(err => {
         log(`${err.message}，已为你下载前3首示范舞曲压缩包`);
         triggerDownload(CLOUD_SAMPLE_URL, CLOUD_SAMPLE_ARCHIVE_NAME);
