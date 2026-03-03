@@ -216,6 +216,30 @@
       display: grid;
       gap: 14px;
     }
+    .library-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .library-filters label {
+      display: grid;
+      gap: 8px;
+      min-width: 180px;
+      flex: 1 1 220px;
+    }
+    .library-filters span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .library-filters select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+      font: inherit;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+    }
     .category-tabs,
     .pagination {
       display: flex;
@@ -376,6 +400,16 @@
         <span>这里展示当前已经同步到仓库的数据。已按分类分页展示，舞曲识别页刷新后会直接读取这里的内容。</span>
       </div>
       <div class="library-toolbar">
+        <div class="library-filters">
+          <label>
+            <span>分类筛选</span>
+            <select id="groupFilter"></select>
+          </label>
+          <label>
+            <span>舞种筛选</span>
+            <select id="danceFilter"></select>
+          </label>
+        </div>
         <div id="categoryTabs" class="category-tabs"></div>
         <div id="pagination" class="pagination"></div>
       </div>
@@ -392,6 +426,7 @@
       busy: false,
       syncChannel: tools.createSyncChannel(),
       libraryCategory: "全部",
+      libraryDance: "全部",
       libraryPage: 1,
     };
 
@@ -415,6 +450,8 @@
       tokenState: document.getElementById("tokenState"),
       queryInput: document.getElementById("queryInput"),
       queryResults: document.getElementById("queryResults"),
+      groupFilter: document.getElementById("groupFilter"),
+      danceFilter: document.getElementById("danceFilter"),
       categoryTabs: document.getElementById("categoryTabs"),
       pagination: document.getElementById("pagination"),
       libraryTable: document.getElementById("libraryTable"),
@@ -507,6 +544,8 @@
     function renderLibraryTable() {
       const songs = state.data.songs || [];
       if (!songs.length) {
+        els.groupFilter.innerHTML = "";
+        els.danceFilter.innerHTML = "";
         els.categoryTabs.innerHTML = "";
         els.pagination.innerHTML = "";
         els.libraryTable.className = "empty";
@@ -527,6 +566,17 @@
         state.libraryCategory = "全部";
       }
 
+      els.groupFilter.innerHTML = visibleCategories.map((category) => `
+        <option value="${tools.escapeHtml(category)}" ${category === state.libraryCategory ? "selected" : ""}>
+          ${tools.escapeHtml(category)} (${counts.get(category)})
+        </option>
+      `).join("");
+      els.groupFilter.onchange = () => {
+        state.libraryCategory = els.groupFilter.value;
+        state.libraryPage = 1;
+        renderLibraryTable();
+      };
+
       els.categoryTabs.innerHTML = visibleCategories.map((category) => `
         <button type="button" data-category="${tools.escapeHtml(category)}" class="${category === state.libraryCategory ? "is-active" : ""}">
           ${tools.escapeHtml(category)} ${counts.get(category)}
@@ -543,14 +593,32 @@
       const filteredSongs = state.libraryCategory === "全部"
         ? songs
         : songs.filter((song) => (tools.classifyDanceGroup(song.dance) || "其他") === state.libraryCategory);
-      const totalPages = Math.max(1, Math.ceil(filteredSongs.length / PAGE_SIZE));
+      const visibleDances = ["全部", ...new Set(filteredSongs.map((song) => song.dance).filter(Boolean))];
+      if (!visibleDances.includes(state.libraryDance)) {
+        state.libraryDance = "全部";
+      }
+      els.danceFilter.innerHTML = visibleDances.map((dance) => `
+        <option value="${tools.escapeHtml(dance)}" ${dance === state.libraryDance ? "selected" : ""}>
+          ${tools.escapeHtml(dance)}
+        </option>
+      `).join("");
+      els.danceFilter.onchange = () => {
+        state.libraryDance = els.danceFilter.value;
+        state.libraryPage = 1;
+        renderLibraryTable();
+      };
+
+      const danceFilteredSongs = state.libraryDance === "全部"
+        ? filteredSongs
+        : filteredSongs.filter((song) => song.dance === state.libraryDance);
+      const totalPages = Math.max(1, Math.ceil(danceFilteredSongs.length / PAGE_SIZE));
       state.libraryPage = Math.min(Math.max(1, state.libraryPage), totalPages);
       const startIndex = (state.libraryPage - 1) * PAGE_SIZE;
-      const pagedSongs = filteredSongs.slice(startIndex, startIndex + PAGE_SIZE);
+      const pagedSongs = danceFilteredSongs.slice(startIndex, startIndex + PAGE_SIZE);
 
       els.pagination.innerHTML = `
         <button type="button" id="prevPageBtn" ${state.libraryPage <= 1 ? "disabled" : ""}>上一页</button>
-        <span class="page-note">${tools.escapeHtml(state.libraryCategory)} · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${filteredSongs.length} 条</span>
+        <span class="page-note">${tools.escapeHtml(state.libraryCategory)} / ${tools.escapeHtml(state.libraryDance)} · 第 ${state.libraryPage} / ${totalPages} 页 · 共 ${danceFilteredSongs.length} 条</span>
         <button type="button" id="nextPageBtn" ${state.libraryPage >= totalPages ? "disabled" : ""}>下一页</button>
       `;
       const prevPageBtn = document.getElementById("prevPageBtn");
