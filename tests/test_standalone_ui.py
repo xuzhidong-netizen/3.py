@@ -195,6 +195,16 @@ def test_cloud_full_download_prefers_prebuilt_release_zip() -> None:
     assert 'triggerDownload(CLOUD_FULL_RELEASE_ZIP_URL, CLOUD_FULL_ARCHIVE_NAME);' in html
 
 
+def test_large_import_uses_fast_mode_guards() -> None:
+    html = (STATIC_ROOT / "standalone.html").read_text(encoding="utf-8")
+
+    assert "const LARGE_IMPORT_FILE_THRESHOLD = 180;" in html
+    assert "const IMPORT_YIELD_INTERVAL = 20;" in html
+    assert "已启用大批量快速模式：跳过逐首时长探测，优先保证页面稳定" in html
+    assert "await yieldToBrowser();" in html
+    assert "song.url = URL.createObjectURL(song.file);" in html
+
+
 def test_import_cards_use_compact_layout_without_clear_buttons(browser, static_server):
     page = browser.new_page()
     try:

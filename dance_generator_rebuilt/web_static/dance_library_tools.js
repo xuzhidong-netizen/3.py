@@ -194,7 +194,12 @@
   }
 
   function cacheLibraryData(data) {
-    global.localStorage.setItem(CACHE_KEY, JSON.stringify(normalizeLibraryData(data)));
+    try {
+      global.localStorage.setItem(CACHE_KEY, JSON.stringify(normalizeLibraryData(data)));
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   function getGitHubToken() {

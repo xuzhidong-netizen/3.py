@@ -247,6 +247,26 @@ test("probeBackendAvailability reports failure when static page has no backend",
   assert.equal(result.status, 404);
 });
 
+test("cacheLibraryData tolerates localStorage quota errors", () => {
+  const tools = loadTools({
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem() {},
+    },
+  });
+
+  assert.equal(tools.cacheLibraryData({
+    version: 1,
+    updated_at: "2026-03-04T10:00:00Z",
+    songs: [{ title: "夜来香", dance: "伦巴", updated_at: "2026-03-04T10:00:00Z" }],
+  }), false);
+});
+
 test("saveLibraryData surfaces friendly message for token permission errors", async () => {
   const storage = new Map();
   let step = 0;
